@@ -1,0 +1,7 @@
+DROP TABLE IF EXISTS audit_log;
+DROP TABLE IF EXISTS hypotheses;
+DROP TABLE IF EXISTS timeline_events;
+DROP TABLE IF EXISTS evidence;
+DROP TABLE IF EXISTS investigations;
+DROP TABLE IF EXISTS alerts;
+DROP TABLE IF EXISTS installations;
