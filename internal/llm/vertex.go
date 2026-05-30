@@ -1,0 +1,107 @@
+package llm
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+
+	"google.golang.org/genai"
+)
+
+type VertexProvider struct {
+	project     string
+	region      string
+	model       string
+	temperature float32
+	maxTokens   int
+	timeout     time.Duration
+}
+
+func NewVertexProvider(cfg ProviderConfig) *VertexProvider {
+	timeout := cfg.Timeout
+	if timeout == 0 {
+		timeout = 120 * time.Second
+	}
+	return &VertexProvider{
+		project:     cfg.GCPProject,
+		region:      cfg.GCPRegion,
+		model:       cfg.Model,
+		temperature: cfg.Temperature,
+		maxTokens:   cfg.MaxTokens,
+		timeout:     timeout,
+	}
+}
+
+func (p *VertexProvider) Name() string {
+	return "vertex"
+}
+
+func (p *VertexProvider) Complete(ctx context.Context, req CompletionRequest) (*CompletionResponse, error) {
+	start := time.Now()
+
+	ctx, cancel := context.WithTimeout(ctx, p.timeout)
+	defer cancel()
+
+	client, err := genai.NewClient(ctx, &genai.ClientConfig{
+		Project:  p.project,
+		Location: p.region,
+		Backend:  genai.BackendVertexAI,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("vertex: create client: %w", err)
+	}
+
+	var userContent string
+	if req.SystemPrompt != "" {
+		userContent = req.SystemPrompt + "\n\n" + req.UserPrompt
+	} else {
+		userContent = req.UserPrompt
+	}
+
+	temp := req.Temperature
+	if temp == 0 {
+		temp = p.temperature
+	}
+	maxTokens := req.MaxTokens
+	if maxTokens == 0 {
+		maxTokens = p.maxTokens
+	}
+
+	config := &genai.GenerateContentConfig{
+		Temperature:     &temp,
+		MaxOutputTokens: int32(maxTokens),
+	}
+
+	result, err := client.Models.GenerateContent(ctx, p.model, genai.Text(userContent), config)
+	if err != nil {
+		return nil, fmt.Errorf("vertex: generate content: %w", err)
+	}
+
+	var content strings.Builder
+	if result.Candidates != nil {
+		for _, candidate := range result.Candidates {
+			if candidate.Content != nil {
+				for _, part := range candidate.Content.Parts {
+					if part.Text != "" {
+						content.WriteString(part.Text)
+					}
+				}
+			}
+		}
+	}
+
+	var inputTokens, outputTokens int
+	if result.UsageMetadata != nil {
+		inputTokens = int(result.UsageMetadata.PromptTokenCount)
+		outputTokens = int(result.UsageMetadata.CandidatesTokenCount)
+	}
+
+	return &CompletionResponse{
+		Content:      content.String(),
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+		Model:        p.model,
+		Latency:      time.Since(start),
+	}, nil
+}
