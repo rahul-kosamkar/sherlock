@@ -1,0 +1,127 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sherlock.fullname" . }}
+  labels:
+    {{- include "sherlock.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "sherlock.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sherlock.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "sherlock.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: SHERLOCK_POSTGRES_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: postgres-dsn
+            - name: SHERLOCK_NATS_URL
+              value: {{ .Values.nats.url | quote }}
+            - name: SHERLOCK_S3_ENDPOINT
+              value: {{ .Values.objectstore.endpoint | quote }}
+            - name: SHERLOCK_S3_BUCKET
+              value: {{ .Values.objectstore.bucket | quote }}
+            - name: SHERLOCK_S3_REGION
+              value: {{ .Values.objectstore.region | quote }}
+            - name: SHERLOCK_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: s3-access-key
+            - name: SHERLOCK_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: s3-secret-key
+            - name: SHERLOCK_S3_USE_PATH_STYLE
+              value: {{ .Values.objectstore.usePathStyle | quote }}
+            - name: SHERLOCK_SLACK_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: slack-bot-token
+            - name: SHERLOCK_SLACK_APP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: slack-app-token
+            - name: SHERLOCK_SLACK_SIGNING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: slack-signing-secret
+            - name: SHERLOCK_SLACK_MODE
+              value: {{ .Values.slack.mode | quote }}
+            - name: SHERLOCK_PROMETHEUS_URL
+              value: {{ .Values.collectors.prometheus.url | quote }}
+            - name: SHERLOCK_LOKI_URL
+              value: {{ .Values.collectors.loki.url | quote }}
+            - name: SHERLOCK_K8S_IN_CLUSTER
+              value: {{ .Values.collectors.kubernetes.inCluster | quote }}
+            - name: SHERLOCK_GRAFANA_HMAC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: grafana-hmac-secret
+            - name: SHERLOCK_INVESTIGATION_TIMEOUT
+              value: {{ .Values.investigation.timeout | quote }}
+            - name: SHERLOCK_INVESTIGATION_MAX_CONCURRENT
+              value: {{ .Values.investigation.maxConcurrent | quote }}
+            - name: SHERLOCK_LLM_ENABLED
+              value: {{ .Values.llm.enabled | quote }}
+            - name: SHERLOCK_LLM_PROVIDER
+              value: {{ .Values.llm.provider | quote }}
+            - name: SHERLOCK_LLM_MODEL
+              value: {{ .Values.llm.model | quote }}
+            - name: SHERLOCK_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: llm-api-key
+            - name: SHERLOCK_LLM_ENDPOINT
+              value: {{ .Values.llm.endpoint | quote }}
+            - name: SHERLOCK_GIT_ENABLED
+              value: {{ .Values.git.enabled | quote }}
+            - name: SHERLOCK_GIT_PROVIDER
+              value: {{ .Values.git.provider | quote }}
+            - name: SHERLOCK_GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "sherlock.fullname" . }}
+                  key: git-token
+            - name: SHERLOCK_GIT_ORGANIZATION
+              value: {{ .Values.git.organization | quote }}
+            - name: SHERLOCK_AUTO_MIGRATE
+              value: {{ .Values.autoMigrate | quote }}
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

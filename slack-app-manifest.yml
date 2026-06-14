@@ -1,0 +1,47 @@
+display_information:
+  name: Sherlock
+  description: Turn noisy alerts into evidence-backed incident investigations
+  background_color: "#1a1a2e"
+  long_description: |
+    Sherlock is an open-source incident investigator that automatically
+    pulls evidence from logs, metrics, Kubernetes, and deployments to
+    produce ranked, evidence-backed hypotheses delivered in Slack threads.
+
+features:
+  bot_user:
+    display_name: Sherlock
+    always_online: true
+  slash_commands:
+    - command: /investigate
+      description: Investigate an alert or service incident
+      usage_hint: "[service-name or alert-link]"
+      should_escape: false
+  shortcuts:
+    - name: Investigate this alert
+      type: message
+      callback_id: investigate_message
+      description: Run a Sherlock investigation on this alert message
+
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - commands
+      - app_mentions:read
+      - channels:history
+      - groups:history
+      - im:history
+      - mpim:history
+      - users:read
+
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_mention
+      - message.channels
+  interactivity:
+    is_enabled: true
+    request_url: https://your-domain.example.com/slack/interactions
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

@@ -1,0 +1,107 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/rahulkosamkar/sherlock
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: sherlock.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+postgres:
+  dsn: ""
+
+nats:
+  url: "nats://nats:4222"
+
+objectstore:
+  endpoint: ""
+  bucket: "sherlock"
+  region: "us-east-1"
+  accessKey: ""
+  secretKey: ""
+  usePathStyle: true
+
+slack:
+  botToken: ""
+  appToken: ""
+  signingSecret: ""
+  mode: "socket"
+
+collectors:
+  prometheus:
+    url: "http://prometheus:9090"
+  loki:
+    url: "http://loki:3100"
+  kubernetes:
+    inCluster: true
+
+receivers:
+  grafana:
+    enabled: true
+    hmacSecret: ""
+  alertmanager:
+    enabled: true
+
+investigation:
+  timeout: "5m"
+  maxConcurrent: 10
+
+llm:
+  enabled: false
+  provider: ""
+  model: ""
+  apiKey: ""
+  endpoint: ""
+
+git:
+  enabled: false
+  provider: "github"
+  token: ""
+  organization: ""
+
+autoMigrate: true
+
+rbac:
+  create: true
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+  # maxUnavailable: 1
