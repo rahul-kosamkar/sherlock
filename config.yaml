@@ -1,0 +1,69 @@
+# Sherlock configuration
+# Uncomment and modify values as needed.
+
+# server:
+#   address: ":8080"
+
+# postgres:
+#   dsn: "${SHERLOCK_POSTGRES_DSN}"
+#   max_conns: 10
+
+# nats:
+#   url: "${SHERLOCK_NATS_URL}"
+#   stream_name: "INVESTIGATIONS"
+
+# objectstore:
+#   endpoint: "${SHERLOCK_S3_ENDPOINT}"
+#   bucket: "sherlock"
+#   region: "us-east-1"
+#   access_key: "${SHERLOCK_S3_ACCESS_KEY}"
+#   secret_key: "${SHERLOCK_S3_SECRET_KEY}"
+#   use_path_style: true
+
+# slack:
+#   bot_token: "${SLACK_BOT_TOKEN}"
+#   app_token: "${SLACK_APP_TOKEN}"
+#   signing_secret: "${SLACK_SIGNING_SECRET}"
+#   mode: "socket"
+
+# collectors:
+#   prometheus:
+#     url: "http://localhost:9090"
+#   loki:
+#     url: "http://localhost:3100"
+#   kubernetes:
+#     in_cluster: false
+
+# receivers:
+#   grafana:
+#     enabled: true
+#     hmac_secret: "${GRAFANA_HMAC_SECRET}"
+#   alertmanager:
+#     enabled: true
+
+# investigation:
+#   timeout: "5m"
+#   max_concurrent: 10
+
+# llm:
+#   enabled: false
+#   provider: "openai"          # openai, vertex, anthropic, ollama
+#   model: "gpt-4o"
+#   api_key: "${SHERLOCK_LLM_API_KEY}"
+#   endpoint: ""                # custom endpoint (required for ollama)
+#   gcp_project: ""             # required for vertex
+#   gcp_region: "us-central1"   # required for vertex
+#   temperature: 0.2
+#   max_tokens: 4096
+#   max_passes: 3
+#   timeout: "120s"
+
+# git:
+#   enabled: false
+#   provider: "github"
+#   token: "${SHERLOCK_GIT_TOKEN}"
+#   organization: ""
+#   default_branch: "main"
+#   workload_repos:
+#     payment-service: "payment-service"
+#     user-service: "user-service"

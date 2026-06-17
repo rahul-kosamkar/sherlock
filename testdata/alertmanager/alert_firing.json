@@ -1,0 +1,46 @@
+{
+  "version": "4",
+  "groupKey": "{}:{alertname=\"HighErrorRate\"}",
+  "truncatedAlerts": 0,
+  "status": "firing",
+  "receiver": "sherlock-webhook",
+  "groupLabels": {
+    "alertname": "HighErrorRate"
+  },
+  "commonLabels": {
+    "alertname": "HighErrorRate",
+    "severity": "critical",
+    "service": "checkout-service",
+    "namespace": "prod",
+    "cluster": "us-east-1"
+  },
+  "commonAnnotations": {
+    "summary": "High error rate on checkout-service",
+    "description": "checkout-service in prod/us-east-1 is returning >5% 5xx errors over the last 10 minutes."
+  },
+  "externalURL": "https://alertmanager.example.com",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "HighErrorRate",
+        "severity": "critical",
+        "service": "checkout-service",
+        "namespace": "prod",
+        "cluster": "us-east-1",
+        "instance": "checkout-service-5d8f7a9b2-m4nqx:8080",
+        "job": "checkout-service"
+      },
+      "annotations": {
+        "summary": "High error rate on checkout-service",
+        "description": "checkout-service in prod/us-east-1 is returning >5% 5xx errors over the last 10 minutes.",
+        "dashboard_url": "https://grafana.example.com/d/xyz789/checkout-service?orgId=1",
+        "runbook_url": "https://wiki.example.com/runbooks/high-error-rate"
+      },
+      "startsAt": "2026-06-05T15:00:00Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "https://prometheus.example.com/graph?g0.expr=rate(http_requests_total{status=~\"5..\"}[5m])>0.05",
+      "fingerprint": "f7e6d5c4b3a20198"
+    }
+  ]
+}

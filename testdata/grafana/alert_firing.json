@@ -1,0 +1,51 @@
+{
+  "receiver": "sherlock-webhook",
+  "status": "firing",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "HighCPUUsage",
+        "severity": "critical",
+        "service": "payments-api",
+        "namespace": "prod",
+        "cluster": "eu1",
+        "instance": "payments-api-7b9f4c6d8-xk2lp:8080"
+      },
+      "annotations": {
+        "summary": "CPU usage above 90% for payments-api",
+        "description": "payments-api in prod/eu1 has been running above 90% CPU for the last 5 minutes.",
+        "dashboard_url": "https://grafana.example.com/d/abc123/payments-api?orgId=1",
+        "runbook_url": "https://wiki.example.com/runbooks/high-cpu"
+      },
+      "startsAt": "2026-06-05T14:30:00Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "https://grafana.example.com/alerting/grafana/abc-def-123/view",
+      "fingerprint": "a1b2c3d4e5f60718",
+      "values": {
+        "B": 93.7
+      }
+    }
+  ],
+  "groupLabels": {
+    "alertname": "HighCPUUsage"
+  },
+  "commonLabels": {
+    "alertname": "HighCPUUsage",
+    "severity": "critical",
+    "service": "payments-api",
+    "namespace": "prod",
+    "cluster": "eu1"
+  },
+  "commonAnnotations": {
+    "summary": "CPU usage above 90% for payments-api",
+    "description": "payments-api in prod/eu1 has been running above 90% CPU for the last 5 minutes."
+  },
+  "externalURL": "https://grafana.example.com/",
+  "version": "1",
+  "groupKey": "{}/{severity=\"critical\"}:{alertname=\"HighCPUUsage\"}",
+  "truncatedAlerts": 0,
+  "title": "[FIRING:1] HighCPUUsage (payments-api prod eu1 critical)",
+  "state": "alerting",
+  "message": "**Firing**\n\nValue: B=93.7\nLabels:\n - alertname = HighCPUUsage\n - severity = critical\n - service = payments-api"
+}
