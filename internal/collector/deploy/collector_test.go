@@ -41,8 +41,6 @@ func TestCollect_ResolvesRepoFromWorkloadMap(t *testing.T) {
 		Targets: []contracts.TargetRef{
 			{Kind: "service", Name: "payments-api"},
 		},
-		TimeFrom: time.Now().Add(-1 * time.Hour),
-		TimeTo:   time.Now(),
 	}
 
 	repo := c.resolveRepo(req.Targets[0])

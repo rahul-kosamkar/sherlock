@@ -19,7 +19,7 @@ func NewIPRateLimiter(r rate.Limit, burst int) *IPRateLimiter {
 
 func (l *IPRateLimiter) getLimiter(ip string) *rate.Limiter {
 	if v, ok := l.limiters.Load(ip); ok {
-		return v.(*rate.Limiter)
+		return v.(*rate.Limiter) //nolint:errcheck // sync.Map value is always *rate.Limiter
 	}
 	limiter := rate.NewLimiter(l.rate, l.burst)
 	l.limiters.Store(ip, limiter)

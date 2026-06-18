@@ -24,7 +24,7 @@ func APIKeyAuth(apiKey string) func(http.Handler) http.Handler {
 			if subtle.ConstantTimeCompare([]byte(auth), []byte(apiKey)) != 1 {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":"unauthorized: invalid or missing API key"}`))
+				_, _ = w.Write([]byte(`{"error":"unauthorized: invalid or missing API key"}`))
 				return
 			}
 			next.ServeHTTP(w, r)

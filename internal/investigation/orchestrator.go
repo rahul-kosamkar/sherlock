@@ -255,7 +255,7 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 		return fmt.Errorf("create investigation: %w", err)
 	}
 
-	o.audit.Log(ctx, inv.TenantID, "system", "investigation.created", inv.ID, map[string]string{
+	_ = o.audit.Log(ctx, inv.TenantID, "system", "investigation.created", inv.ID, map[string]string{
 		"alert_id": job.Alert.ID,
 	})
 
@@ -288,7 +288,7 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 	}
 
 	if inv.SlackChannelID != "" && o.slack != nil {
-		o.slack.PostEvidenceUpdate(ctx, inv.SlackChannelID, inv.SlackThreadTS,
+		_ = o.slack.PostEvidenceUpdate(ctx, inv.SlackChannelID, inv.SlackThreadTS,
 			fmt.Sprintf("Collecting evidence for %d target(s)...", len(resolved.Targets)))
 	}
 
@@ -311,7 +311,7 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 	}
 
 	if inv.SlackChannelID != "" && o.slack != nil {
-		o.slack.PostEvidenceUpdate(ctx, inv.SlackChannelID, inv.SlackThreadTS,
+		_ = o.slack.PostEvidenceUpdate(ctx, inv.SlackChannelID, inv.SlackThreadTS,
 			fmt.Sprintf("Collected %d evidence items. Analyzing...", len(collected)))
 	}
 
@@ -447,7 +447,7 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 	metrics.InvestigationsCompleted.WithLabelValues("done").Inc()
 	metrics.InvestigationDuration.Observe(time.Since(invStart).Seconds())
 
-	o.audit.Log(ctx, inv.TenantID, "system", "investigation.completed", inv.ID, map[string]string{
+	_ = o.audit.Log(ctx, inv.TenantID, "system", "investigation.completed", inv.ID, map[string]string{
 		"headline":   headline,
 		"confidence": fmt.Sprintf("%.2f", confidence),
 		"evidence":   fmt.Sprintf("%d", len(collected)),
@@ -466,13 +466,13 @@ func (o *Orchestrator) selectRCAEngine() RCAService {
 
 func (o *Orchestrator) failInvestigation(ctx context.Context, inv *contracts.Investigation, errMsg string) error {
 	metrics.InvestigationsCompleted.WithLabelValues("failed").Inc()
-	o.investigations.UpdateStatus(ctx, inv.ID, contracts.StatusFailed)
+	_ = o.investigations.UpdateStatus(ctx, inv.ID, contracts.StatusFailed)
 
 	if inv.SlackChannelID != "" && o.slack != nil {
-		o.slack.PostError(ctx, inv.SlackChannelID, inv.SlackThreadTS, errMsg)
+		_ = o.slack.PostError(ctx, inv.SlackChannelID, inv.SlackThreadTS, errMsg)
 	}
 
-	o.audit.Log(ctx, inv.TenantID, "system", "investigation.failed", inv.ID, map[string]string{
+	_ = o.audit.Log(ctx, inv.TenantID, "system", "investigation.failed", inv.ID, map[string]string{
 		"error": errMsg,
 	})
 

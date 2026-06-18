@@ -54,7 +54,7 @@ func New(kubeconfig string, inCluster bool, log *zap.Logger) (*Collector, error)
 func (c *Collector) Name() string { return sourceName }
 
 func (c *Collector) Collect(ctx context.Context, req contracts.CollectRequest) ([]contracts.Evidence, error) {
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, len(req.Targets))
 
 	for _, target := range req.Targets {
 		if !isK8sTarget(target) {
@@ -127,7 +127,7 @@ func (c *Collector) listEvents(ctx context.Context, target contracts.TargetRef) 
 }
 
 func (c *Collector) podStateEvidence(req contracts.CollectRequest, target contracts.TargetRef, pod *corev1.Pod) []contracts.Evidence {
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, len(pod.Status.ContainerStatuses))
 	now := time.Now().UTC()
 
 	for _, cs := range pod.Status.ContainerStatuses {
@@ -179,7 +179,7 @@ func (c *Collector) podStateEvidence(req contracts.CollectRequest, target contra
 }
 
 func (c *Collector) previousLogEvidence(ctx context.Context, req contracts.CollectRequest, target contracts.TargetRef, pod *corev1.Pod) []contracts.Evidence {
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, len(pod.Status.ContainerStatuses))
 	now := time.Now().UTC()
 
 	for _, cs := range pod.Status.ContainerStatuses {
@@ -230,7 +230,7 @@ func (c *Collector) previousLogEvidence(ctx context.Context, req contracts.Colle
 }
 
 func (c *Collector) eventEvidence(req contracts.CollectRequest, target contracts.TargetRef, events []corev1.Event) []contracts.Evidence {
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, len(events))
 	now := time.Now().UTC()
 
 	for i := range events {

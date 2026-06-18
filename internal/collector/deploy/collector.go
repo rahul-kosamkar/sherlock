@@ -48,7 +48,7 @@ func New(cfg Config, logger *zap.Logger) *Collector {
 func (c *Collector) Name() string { return sourceName }
 
 func (c *Collector) Collect(ctx context.Context, req contracts.CollectRequest) ([]contracts.Evidence, error) {
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, len(req.Targets))
 
 	for _, target := range req.Targets {
 		repo := c.resolveRepo(target)
@@ -116,7 +116,7 @@ func (c *Collector) collectGitHubDeployments(ctx context.Context, req contracts.
 	}
 
 	extendedFrom := req.TimeFrom.Add(-2 * time.Hour)
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, len(deployments))
 	var prevSHA string
 
 	for i, dep := range deployments {
@@ -192,7 +192,7 @@ func (c *Collector) collectGitHubCompare(ctx context.Context, req contracts.Coll
 		return nil, fmt.Errorf("decode compare: %w", err)
 	}
 
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, 1+len(comparison.Commits))
 
 	summaryEv := contracts.Evidence{
 		ID:              uuid.NewString(),
@@ -268,7 +268,7 @@ func (c *Collector) collectGitLabDeployments(ctx context.Context, req contracts.
 	}
 
 	extendedFrom := req.TimeFrom.Add(-2 * time.Hour)
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, len(deployments))
 
 	for _, dep := range deployments {
 		if dep.CreatedAt.Before(extendedFrom) || dep.CreatedAt.After(req.TimeTo) {

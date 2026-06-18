@@ -14,7 +14,7 @@ func New() *Builder {
 }
 
 func (b *Builder) Build(data contracts.InvestigationData) []contracts.TimelineEvent {
-	var events []contracts.TimelineEvent
+	events := make([]contracts.TimelineEvent, 0, len(data.Alerts)+len(data.Evidence))
 
 	for _, alert := range data.Alerts {
 		events = append(events, contracts.TimelineEvent{

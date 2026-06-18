@@ -49,7 +49,7 @@ func (r *DeployProximityRule) Evaluate(_ context.Context, graph contracts.Invest
 	logs := findEvidenceByKind(evidence, contracts.EvidenceLog)
 	metrics := findEvidenceByKind(evidence, contracts.EvidenceMetric)
 
-	var supporting []string
+	supporting := make([]string, 0, len(deploys)+len(gitChanges)+len(logs)+len(metrics))
 	for _, d := range deploys {
 		supporting = append(supporting, d.ID)
 	}

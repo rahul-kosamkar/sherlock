@@ -79,7 +79,7 @@ func (t *SocketTransport) dispatchEvent(ctx context.Context, evt socketmode.Even
 			t.logger.Error("unexpected events API payload type")
 			return
 		}
-		t.socket.Ack(*evt.Request)
+		_ = t.socket.Ack(*evt.Request)
 
 		if evtAPI.Type == slackevents.CallbackEvent {
 			switch inner := evtAPI.InnerEvent.Data.(type) {
@@ -98,7 +98,7 @@ func (t *SocketTransport) dispatchEvent(ctx context.Context, evt socketmode.Even
 			t.logger.Error("unexpected slash command payload type")
 			return
 		}
-		t.socket.Ack(*evt.Request)
+		_ = t.socket.Ack(*evt.Request)
 		cmd := SlashCommand{
 			Command:     data.Command,
 			Text:        data.Text,
@@ -118,7 +118,7 @@ func (t *SocketTransport) dispatchEvent(ctx context.Context, evt socketmode.Even
 			t.logger.Error("unexpected interaction payload type")
 			return
 		}
-		t.socket.Ack(*evt.Request)
+		_ = t.socket.Ack(*evt.Request)
 
 		switch cb.Type {
 		case slack.InteractionTypeMessageAction:

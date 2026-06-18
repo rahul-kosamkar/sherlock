@@ -58,7 +58,7 @@ func main() {
 	}
 
 	logger, _ := zap.NewProduction()
-	defer logger.Sync()
+	defer func() { _ = logger.Sync() }()
 
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
 		dsn := os.Getenv("SHERLOCK_POSTGRES_DSN")
@@ -364,7 +364,6 @@ func run(logger *zap.Logger) error {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(middleware.RealIP)
 	router.Mount("/", gateway.Routes())
 	router.Mount("/", apiServer.Routes())
 	router.Handle("/metrics", promhttp.Handler())

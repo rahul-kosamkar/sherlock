@@ -131,7 +131,7 @@ func parseFields(raw string) map[string]string {
 func cleanMultiline(s string) string {
 	s = strings.TrimSpace(s)
 	lines := strings.Split(s, "\n")
-	var cleaned []string
+	cleaned := make([]string, 0, len(lines))
 	for _, line := range lines {
 		cleaned = append(cleaned, strings.TrimSpace(line))
 	}

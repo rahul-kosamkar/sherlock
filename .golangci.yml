@@ -30,7 +30,6 @@ linters-settings:
   gocritic:
     enabled-checks:
       - dupImport
-      - ifElseChain
       - nestingReduce
       - unnamedResult
   revive:

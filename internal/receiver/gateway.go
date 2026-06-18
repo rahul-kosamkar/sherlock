@@ -248,7 +248,7 @@ func (g *Gateway) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusAccepted)
 		resp := fmt.Sprintf(`{"status":"deduplicated","message":"%d alert(s) linked to existing investigations"}`, dedupCount)
-		w.Write([]byte(resp))
+		_, _ = w.Write([]byte(resp))
 		return
 	}
 

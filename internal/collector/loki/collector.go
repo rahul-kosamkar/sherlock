@@ -159,7 +159,7 @@ func (c *Collector) executeQuery(ctx context.Context, req contracts.CollectReque
 }
 
 func (c *Collector) parseStreams(req contracts.CollectRequest, target contracts.TargetRef, q logQuery, streams []lokiStream) []contracts.Evidence {
-	var evidence []contracts.Evidence
+	evidence := make([]contracts.Evidence, 0, len(streams))
 	now := time.Now().UTC()
 
 	for _, stream := range streams {
