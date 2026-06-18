@@ -22,18 +22,15 @@ builds:
 
 archives:
   - id: sherlock
-    builds:
-      - sherlock
     name_template: "sherlock_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-      - goos: windows
-        format: zip
 
 dockers:
   - image_templates:
-      - "ghcr.io/rahulkosamkar/sherlock:{{ .Version }}"
-      - "ghcr.io/rahulkosamkar/sherlock:latest"
-    dockerfile: Dockerfile
+      - "ghcr.io/rahul-kosamkar/sherlock:{{ .Version }}"
+      - "ghcr.io/rahul-kosamkar/sherlock:latest"
+    dockerfile: Dockerfile.goreleaser
+    extra_files:
+      - migrations
     build_flag_templates:
       - "--platform=linux/amd64"
 
@@ -50,6 +47,6 @@ changelog:
 
 release:
   github:
-    owner: rahulkosamkar
+    owner: rahul-kosamkar
     name: sherlock
   prerelease: auto

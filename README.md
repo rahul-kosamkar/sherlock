@@ -489,7 +489,7 @@ podDisruptionBudget:
 
 Tagged releases automatically build and publish:
 - Multi-arch binaries (linux/darwin, amd64/arm64) via GoReleaser
-- Docker images to `ghcr.io/rahulkosamkar/sherlock`
+- Docker images to `ghcr.io/rahul-kosamkar/sherlock`
 
 To create a release:
 ```bash
