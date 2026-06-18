@@ -93,3 +93,31 @@ type RCAEngine interface {
 	Name() string
 	Rank(ctx context.Context, graph InvestigationGraph) ([]Hypothesis, error)
 }
+
+type InvestigationJob struct {
+	Alert          NormalizedAlert `json:"alert"`
+	SlackChannelID string          `json:"slack_channel_id,omitempty"`
+	SlackThreadTS  string          `json:"slack_thread_ts,omitempty"`
+	RequestedBy    string          `json:"requested_by,omitempty"`
+	TraceParent    string          `json:"trace_parent,omitempty"`
+	TraceState     string          `json:"trace_state,omitempty"`
+}
+
+type DedupResult struct {
+	IsDuplicate      bool
+	ExistingID       string
+	ExistingHeadline string
+	ExistingChannel  string
+	ExistingThread   string
+}
+
+type ActiveInvestigation struct {
+	ID             string
+	Status         string
+	Headline       string
+	Confidence     float64
+	SlackChannelID string
+	SlackThreadTS  string
+	CreatedAt      time.Time
+	CompletedAt    *time.Time
+}
