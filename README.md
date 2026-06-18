@@ -1,5 +1,9 @@
 # Sherlock
 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![CI](https://github.com/rahul-kosamkar/sherlock/actions/workflows/ci.yml/badge.svg)](https://github.com/rahul-kosamkar/sherlock/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/rahulkosamkar/sherlock)](https://goreportcard.com/report/github.com/rahulkosamkar/sherlock)
+
 **Turn noisy alerts into evidence-backed, auditable incident investigations in Slack.**
 
 Sherlock is an open-source incident investigator written in Go. It sits between your alerting systems and your engineering team, automatically pulling evidence from logs, metrics, Kubernetes, deployments, and source code to produce ranked, evidence-backed hypotheses -- delivered directly in Slack threads.
