@@ -75,11 +75,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.1.6
-
       - name: Run golangci-lint
-        run: golangci-lint run ./...
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64
 
   dco:
     runs-on: ubuntu-latest
