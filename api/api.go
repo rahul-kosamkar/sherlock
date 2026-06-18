@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -86,8 +87,12 @@ func (s *Server) handleGetInvestigation(w http.ResponseWriter, r *http.Request) 
 	id := chi.URLParam(r, "id")
 	inv, err := s.investigations.GetByID(r.Context(), id)
 	if err != nil {
-		s.logger.Error("failed to get investigation", zap.String("id", id), zap.Error(err))
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "investigation not found"})
+		if errors.Is(err, contracts.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "investigation not found"})
+		} else {
+			s.logger.Error("failed to get investigation", zap.String("id", id), zap.Error(err))
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		}
 		return
 	}
 	writeJSON(w, http.StatusOK, inv)
@@ -95,6 +100,15 @@ func (s *Server) handleGetInvestigation(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) handleListEvidence(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if _, err := s.investigations.GetByID(r.Context(), id); err != nil {
+		if errors.Is(err, contracts.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "investigation not found"})
+		} else {
+			s.logger.Error("failed to verify investigation", zap.String("id", id), zap.Error(err))
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		}
+		return
+	}
 	evidence, err := s.evidence.ListByInvestigation(r.Context(), id)
 	if err != nil {
 		s.logger.Error("failed to list evidence", zap.String("investigation_id", id), zap.Error(err))
@@ -106,6 +120,15 @@ func (s *Server) handleListEvidence(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleListTimeline(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if _, err := s.investigations.GetByID(r.Context(), id); err != nil {
+		if errors.Is(err, contracts.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "investigation not found"})
+		} else {
+			s.logger.Error("failed to verify investigation", zap.String("id", id), zap.Error(err))
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		}
+		return
+	}
 	events, err := s.timelines.ListByInvestigation(r.Context(), id)
 	if err != nil {
 		s.logger.Error("failed to list timeline", zap.String("investigation_id", id), zap.Error(err))
@@ -117,6 +140,15 @@ func (s *Server) handleListTimeline(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleListHypotheses(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	if _, err := s.investigations.GetByID(r.Context(), id); err != nil {
+		if errors.Is(err, contracts.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "investigation not found"})
+		} else {
+			s.logger.Error("failed to verify investigation", zap.String("id", id), zap.Error(err))
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		}
+		return
+	}
 	hypotheses, err := s.hypotheses.ListByInvestigation(r.Context(), id)
 	if err != nil {
 		s.logger.Error("failed to list hypotheses", zap.String("investigation_id", id), zap.Error(err))

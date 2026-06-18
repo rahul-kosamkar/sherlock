@@ -6,12 +6,15 @@ import (
 	"math"
 	"time"
 
+	"sync"
+
 	"github.com/google/uuid"
 	promapi "github.com/prometheus/client_golang/api"
 	promv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -42,25 +45,39 @@ func New(url string, log *zap.Logger) (*Collector, error) {
 func (c *Collector) Name() string { return sourceName }
 
 func (c *Collector) Collect(ctx context.Context, req contracts.CollectRequest) ([]contracts.Evidence, error) {
-	var evidence []contracts.Evidence
+	var (
+		mu       sync.Mutex
+		evidence []contracts.Evidence
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(5)
 
 	for _, target := range req.Targets {
 		queries := buildQueries(target, req.Alert.Labels)
 		for _, q := range queries {
-			ev, err := c.executeQuery(ctx, req, target, q)
-			if err != nil {
-				c.log.Warn("prometheus query failed",
-					zap.String("query", q.expr),
-					zap.Error(err),
-				)
-				continue
-			}
-			if ev != nil {
-				evidence = append(evidence, *ev)
-			}
+			g.Go(func() error {
+				ev, err := c.executeQuery(gctx, req, target, q)
+				if err != nil {
+					c.log.Warn("prometheus query failed",
+						zap.String("query", q.expr),
+						zap.Error(err),
+					)
+					return nil
+				}
+				if ev != nil {
+					mu.Lock()
+					evidence = append(evidence, *ev)
+					mu.Unlock()
+				}
+				return nil
+			})
 		}
 	}
 
+	if err := g.Wait(); err != nil {
+		return evidence, err
+	}
 	return evidence, nil
 }
 

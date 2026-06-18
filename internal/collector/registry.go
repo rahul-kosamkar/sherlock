@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
+	"github.com/rahulkosamkar/sherlock/internal/metrics"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -54,6 +55,7 @@ func (r *Registry) CollectAll(ctx context.Context, req contracts.CollectRequest)
 			mu.Lock()
 			combined = append(combined, ev...)
 			mu.Unlock()
+			metrics.EvidenceCollected.WithLabelValues(c.Name()).Add(float64(len(ev)))
 			return nil
 		})
 	}

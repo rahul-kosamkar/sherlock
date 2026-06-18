@@ -17,6 +17,7 @@ type AnthropicProvider struct {
 	temperature float32
 	maxTokens   int
 	timeout     time.Duration
+	client      *http.Client
 }
 
 func NewAnthropicProvider(cfg ProviderConfig) *AnthropicProvider {
@@ -35,6 +36,7 @@ func NewAnthropicProvider(cfg ProviderConfig) *AnthropicProvider {
 		temperature: cfg.Temperature,
 		maxTokens:   cfg.MaxTokens,
 		timeout:     timeout,
+		client:      &http.Client{Timeout: timeout},
 	}
 }
 
@@ -82,7 +84,7 @@ func (p *AnthropicProvider) Complete(ctx context.Context, req CompletionRequest)
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := p.client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("anthropic: request failed: %w", err)
 	}
@@ -93,11 +95,8 @@ func (p *AnthropicProvider) Complete(ctx context.Context, req CompletionRequest)
 		return nil, fmt.Errorf("anthropic: read response: %w", err)
 	}
 
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, fmt.Errorf("anthropic: rate limited (429)")
-	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("anthropic: unexpected status %d: %s", resp.StatusCode, string(respBody))
+		return nil, NewLLMError("anthropic", resp.StatusCode, string(respBody))
 	}
 
 	var result struct {

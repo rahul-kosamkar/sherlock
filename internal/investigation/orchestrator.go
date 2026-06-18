@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -85,11 +86,72 @@ type RemediationEvaluator interface {
 }
 
 type QueueConsumer interface {
-	Subscribe(ctx context.Context, subject string, handler func(msg []byte) error) error
+	Subscribe(ctx context.Context, subject string, handler func(msg []byte, ack func(), nak func()) error) error
 }
 
 type QueuePublisher interface {
 	Publish(ctx context.Context, subject string, data []byte) error
+}
+
+type BlobStore interface {
+	PutEvidenceBlob(ctx context.Context, key string, data []byte) error
+}
+
+type TxBeginner interface {
+	BeginTx(ctx context.Context) (Tx, error)
+}
+
+type Tx interface {
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+}
+
+type TxRepoFactory interface {
+	InvestigationRepoTx(tx Tx) InvestigationStore
+	EvidenceRepoTx(tx Tx) EvidenceStore
+	TimelineRepoTx(tx Tx) TimelineStore
+	HypothesisRepoTx(tx Tx) HypothesisStore
+}
+
+type OrchestratorDeps struct {
+	Investigations InvestigationStore
+	Evidence       EvidenceStore
+	Timelines      TimelineStore
+	Hypotheses     HypothesisStore
+	Alerts         AlertStore
+	Collectors     CollectorSet
+	Correlator     CorrelatorService
+	RCA            RCAService
+	Timeline       TimelineBuilder
+	Entity         EntityResolver
+	Slack          SlackNotifier
+	Audit          AuditLogger
+	Consumer       QueueConsumer
+	Logger         *zap.Logger
+	TxBeginner     TxBeginner
+	TxRepos        TxRepoFactory
+}
+
+type Option func(*Orchestrator)
+
+func WithLLMEngine(engine RCAService) Option {
+	return func(o *Orchestrator) { o.llmRCA = engine; o.llmEnabled = true }
+}
+
+func WithRemediation(r RemediationEvaluator) Option {
+	return func(o *Orchestrator) { o.remediation = r }
+}
+
+func WithMaxConcurrent(n int) Option {
+	return func(o *Orchestrator) { o.maxConcurrent = n; o.sem = make(chan struct{}, n) }
+}
+
+func WithTimeout(d time.Duration) Option {
+	return func(o *Orchestrator) { o.timeout = d }
+}
+
+func WithBlobStore(bs BlobStore) Option {
+	return func(o *Orchestrator) { o.blobStore = bs }
 }
 
 type Orchestrator struct {
@@ -108,6 +170,9 @@ type Orchestrator struct {
 	audit          AuditLogger
 	remediation    RemediationEvaluator
 	consumer       QueueConsumer
+	blobStore      BlobStore
+	txBeginner     TxBeginner
+	txRepos        TxRepoFactory
 	logger         *zap.Logger
 	maxConcurrent  int
 	timeout        time.Duration
@@ -117,80 +182,38 @@ type Orchestrator struct {
 	wg  sync.WaitGroup
 }
 
-type OrchestratorConfig struct {
-	MaxConcurrent int
-	Timeout       time.Duration
-	StreamName    string
-	LLMEnabled    bool
-}
-
-func NewOrchestrator(
-	cfg OrchestratorConfig,
-	investigations InvestigationStore,
-	evidence EvidenceStore,
-	timelines TimelineStore,
-	hypotheses HypothesisStore,
-	alerts AlertStore,
-	collectors CollectorSet,
-	correlator CorrelatorService,
-	rca RCAService,
-	timeline TimelineBuilder,
-	entity EntityResolver,
-	slack SlackNotifier,
-	audit AuditLogger,
-	consumer QueueConsumer,
-	logger *zap.Logger,
-) *Orchestrator {
-	maxC := cfg.MaxConcurrent
-	if maxC <= 0 {
-		maxC = 10
+func NewOrchestrator(deps OrchestratorDeps, opts ...Option) *Orchestrator {
+	o := &Orchestrator{
+		investigations: deps.Investigations,
+		evidence:       deps.Evidence,
+		timelines:      deps.Timelines,
+		hypotheses:     deps.Hypotheses,
+		alerts:         deps.Alerts,
+		collectors:     deps.Collectors,
+		correlator:     deps.Correlator,
+		rca:            deps.RCA,
+		timeline:       deps.Timeline,
+		entity:         deps.Entity,
+		slack:          deps.Slack,
+		audit:          deps.Audit,
+		consumer:       deps.Consumer,
+		txBeginner:     deps.TxBeginner,
+		txRepos:        deps.TxRepos,
+		logger:         deps.Logger,
+		maxConcurrent:  10,
+		timeout:        5 * time.Minute,
+		sem:            make(chan struct{}, 10),
 	}
-	timeout := cfg.Timeout
-	if timeout <= 0 {
-		timeout = 5 * time.Minute
+	for _, opt := range opts {
+		opt(o)
 	}
-
-	return &Orchestrator{
-		investigations: investigations,
-		evidence:       evidence,
-		timelines:      timelines,
-		hypotheses:     hypotheses,
-		alerts:         alerts,
-		collectors:     collectors,
-		correlator:     correlator,
-		rca:            rca,
-		timeline:       timeline,
-		entity:         entity,
-		slack:          slack,
-		audit:          audit,
-		consumer:       consumer,
-		logger:         logger,
-		maxConcurrent:  maxC,
-		timeout:        timeout,
-		llmEnabled:     cfg.LLMEnabled,
-		sem:            make(chan struct{}, maxC),
-	}
-}
-
-func (o *Orchestrator) SetLLMEngine(engine RCAService) {
-	o.llmRCA = engine
-}
-
-func (o *Orchestrator) SetRemediation(r RemediationEvaluator) {
-	o.remediation = r
-}
-
-type investigationJob struct {
-	Alert          contracts.NormalizedAlert `json:"alert"`
-	SlackChannelID string                    `json:"slack_channel_id,omitempty"`
-	SlackThreadTS  string                    `json:"slack_thread_ts,omitempty"`
-	RequestedBy    string                    `json:"requested_by,omitempty"`
+	return o
 }
 
 func (o *Orchestrator) Start(ctx context.Context, streamName string) error {
 	subject := streamName + ".new"
-	return o.consumer.Subscribe(ctx, subject, func(msg []byte) error {
-		var job investigationJob
+	return o.consumer.Subscribe(ctx, subject, func(msg []byte, ack func(), nak func()) error {
+		var job contracts.InvestigationJob
 		if err := json.Unmarshal(msg, &job); err != nil {
 			o.logger.Error("failed to unmarshal investigation job", zap.Error(err))
 			return fmt.Errorf("unmarshal job: %w", err)
@@ -201,6 +224,15 @@ func (o *Orchestrator) Start(ctx context.Context, streamName string) error {
 		go func() {
 			defer o.wg.Done()
 			defer func() { <-o.sem }()
+			defer func() {
+				if r := recover(); r != nil {
+					o.logger.Error("investigation panicked",
+						zap.String("alert_id", job.Alert.ID),
+						zap.Any("panic", r),
+					)
+					nak()
+				}
+			}()
 
 			invCtx, cancel := context.WithTimeout(ctx, o.timeout)
 			defer cancel()
@@ -210,7 +242,10 @@ func (o *Orchestrator) Start(ctx context.Context, streamName string) error {
 					zap.String("alert_id", job.Alert.ID),
 					zap.Error(err),
 				)
+				nak()
+				return
 			}
+			ack()
 		}()
 
 		return nil
@@ -221,11 +256,23 @@ func (o *Orchestrator) Stop() {
 	o.wg.Wait()
 }
 
-func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJob) error {
+func (o *Orchestrator) runInvestigation(ctx context.Context, job contracts.InvestigationJob) (retErr error) {
 	invStart := time.Now()
 	metrics.InvestigationsStarted.Inc()
 	metrics.ActiveInvestigations.Inc()
 	defer metrics.ActiveInvestigations.Dec()
+
+	var investigationFailed bool
+	defer func() {
+		if !investigationFailed {
+			if retErr != nil {
+				metrics.InvestigationsCompleted.WithLabelValues("failed").Inc()
+			} else {
+				metrics.InvestigationsCompleted.WithLabelValues("done").Inc()
+			}
+		}
+		metrics.InvestigationDuration.Observe(time.Since(invStart).Seconds())
+	}()
 
 	inv := &contracts.Investigation{
 		ID:             uuid.New().String(),
@@ -238,11 +285,21 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 	}
 
 	tracer := otel.Tracer("sherlock.investigation")
-	ctx, span := tracer.Start(ctx, "investigation.run",
-		trace.WithAttributes(
-			attribute.String("investigation.id", inv.ID),
-			attribute.String("alert.id", job.Alert.ID),
-		))
+
+	carrier := propagation.MapCarrier{}
+	carrier.Set("traceparent", job.TraceParent)
+	carrier.Set("tracestate", job.TraceState)
+	parentCtx := otel.GetTextMapPropagator().Extract(ctx, carrier)
+	remoteSpanCtx := trace.SpanContextFromContext(parentCtx)
+	var spanOpts []trace.SpanStartOption
+	spanOpts = append(spanOpts, trace.WithAttributes(
+		attribute.String("investigation.id", inv.ID),
+		attribute.String("alert.id", job.Alert.ID),
+	))
+	if remoteSpanCtx.IsValid() {
+		spanOpts = append(spanOpts, trace.WithLinks(trace.Link{SpanContext: remoteSpanCtx}))
+	}
+	ctx, span := tracer.Start(ctx, "investigation.run", spanOpts...)
 	defer span.End()
 
 	if err := o.alerts.Create(ctx, &job.Alert); err != nil {
@@ -302,12 +359,26 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 	collectSpan.SetAttributes(attribute.Int("evidence.count", len(collected)))
 	collectSpan.End()
 
-	if len(collected) > 0 {
-		if err := o.evidence.CreateBatch(ctx, collected); err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "store evidence failed")
-			return fmt.Errorf("store evidence: %w", err)
+	if o.blobStore != nil {
+		for i := range collected {
+			if len(collected[i].BodyRef) > 4096 {
+				blobKey := fmt.Sprintf("evidence/%s/%s", inv.ID, collected[i].ID)
+				if err := o.blobStore.PutEvidenceBlob(ctx, blobKey, []byte(collected[i].BodyRef)); err != nil {
+					o.logger.Warn("failed to offload evidence body to blob store",
+						zap.String("evidence_id", collected[i].ID),
+						zap.Error(err),
+					)
+				} else {
+					collected[i].BodyRef = blobKey
+				}
+			}
 		}
+	}
+
+	if err := o.storeEvidenceBatch(ctx, inv.ID, collected); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "store evidence failed")
+		return fmt.Errorf("store evidence: %w", err)
 	}
 
 	if inv.SlackChannelID != "" && o.slack != nil {
@@ -349,6 +420,7 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 		rcaSpan.End()
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "RCA engine failed")
+		investigationFailed = true
 		return o.failInvestigation(ctx, inv, "RCA engine failed: "+err.Error())
 	}
 	rcaSpan.SetAttributes(attribute.Int("hypotheses.count", len(hypotheses)))
@@ -374,34 +446,19 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 		}
 	}
 
-	if len(hypotheses) > 0 {
-		if err := o.hypotheses.CreateBatch(ctx, inv.ID, hypotheses); err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "store hypotheses failed")
-			return fmt.Errorf("store hypotheses: %w", err)
-		}
-	}
-
 	events := o.timeline.Build(invData)
-	if len(events) > 0 {
-		if err := o.timelines.CreateBatch(ctx, events); err != nil {
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "store timeline failed")
-			return fmt.Errorf("store timeline: %w", err)
-		}
-	}
-
-	if err := o.investigations.UpdateStatus(ctx, inv.ID, contracts.StatusPublishing); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "update status failed")
-		return fmt.Errorf("update status to publishing: %w", err)
-	}
 
 	headline := "No clear hypothesis identified"
 	confidence := 0.0
 	if len(hypotheses) > 0 {
 		headline = hypotheses[0].Title
 		confidence = hypotheses[0].Confidence
+	}
+
+	if err := o.storeCompletionBatch(ctx, inv.ID, headline, confidence, hypotheses, events); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "store completion batch failed")
+		return fmt.Errorf("store completion batch: %w", err)
 	}
 
 	result := &contracts.InvestigationResult{
@@ -431,21 +488,12 @@ func (o *Orchestrator) runInvestigation(ctx context.Context, job investigationJo
 	}
 	pubSpan.End()
 
-	if err := o.investigations.Complete(ctx, inv.ID, headline, confidence); err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "complete investigation failed")
-		return fmt.Errorf("complete investigation: %w", err)
-	}
-
 	span.SetAttributes(
 		attribute.String("investigation.headline", headline),
 		attribute.Float64("investigation.confidence", confidence),
 		attribute.Int("evidence.count", len(collected)),
 		attribute.Int("hypotheses.count", len(hypotheses)),
 	)
-
-	metrics.InvestigationsCompleted.WithLabelValues("done").Inc()
-	metrics.InvestigationDuration.Observe(time.Since(invStart).Seconds())
 
 	_ = o.audit.Log(ctx, inv.TenantID, "system", "investigation.completed", inv.ID, map[string]string{
 		"headline":   headline,
@@ -479,14 +527,75 @@ func (o *Orchestrator) failInvestigation(ctx context.Context, inv *contracts.Inv
 	return fmt.Errorf("investigation failed: %s", errMsg)
 }
 
-// EnqueueInvestigation creates and publishes an investigation job.
-// Used by the Slack app to trigger investigations from commands/shortcuts.
+func (o *Orchestrator) storeEvidenceBatch(ctx context.Context, investigationID string, collected []contracts.Evidence) error {
+	if len(collected) == 0 {
+		return nil
+	}
+	if o.txBeginner != nil && o.txRepos != nil {
+		tx, err := o.txBeginner.BeginTx(ctx)
+		if err != nil {
+			return fmt.Errorf("begin tx: %w", err)
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+
+		if err := o.txRepos.EvidenceRepoTx(tx).CreateBatch(ctx, collected); err != nil {
+			return err
+		}
+		return tx.Commit(ctx)
+	}
+	return o.evidence.CreateBatch(ctx, collected)
+}
+
+func (o *Orchestrator) storeCompletionBatch(ctx context.Context, invID, headline string, confidence float64, hypotheses []contracts.Hypothesis, events []contracts.TimelineEvent) error {
+	if o.txBeginner != nil && o.txRepos != nil {
+		tx, err := o.txBeginner.BeginTx(ctx)
+		if err != nil {
+			return fmt.Errorf("begin tx: %w", err)
+		}
+		defer func() { _ = tx.Rollback(ctx) }()
+
+		txInv := o.txRepos.InvestigationRepoTx(tx)
+		if len(hypotheses) > 0 {
+			if err := o.txRepos.HypothesisRepoTx(tx).CreateBatch(ctx, invID, hypotheses); err != nil {
+				return fmt.Errorf("store hypotheses: %w", err)
+			}
+		}
+		if len(events) > 0 {
+			if err := o.txRepos.TimelineRepoTx(tx).CreateBatch(ctx, events); err != nil {
+				return fmt.Errorf("store timeline: %w", err)
+			}
+		}
+		if err := txInv.UpdateStatus(ctx, invID, contracts.StatusPublishing); err != nil {
+			return fmt.Errorf("update status to publishing: %w", err)
+		}
+		if err := txInv.Complete(ctx, invID, headline, confidence); err != nil {
+			return fmt.Errorf("complete investigation: %w", err)
+		}
+		return tx.Commit(ctx)
+	}
+
+	if len(hypotheses) > 0 {
+		if err := o.hypotheses.CreateBatch(ctx, invID, hypotheses); err != nil {
+			return fmt.Errorf("store hypotheses: %w", err)
+		}
+	}
+	if len(events) > 0 {
+		if err := o.timelines.CreateBatch(ctx, events); err != nil {
+			return fmt.Errorf("store timeline: %w", err)
+		}
+	}
+	if err := o.investigations.UpdateStatus(ctx, invID, contracts.StatusPublishing); err != nil {
+		return fmt.Errorf("update status to publishing: %w", err)
+	}
+	return o.investigations.Complete(ctx, invID, headline, confidence)
+}
+
 func EnqueueInvestigation(ctx context.Context, publisher QueuePublisher, streamName string, alert contracts.NormalizedAlert, channelID, threadTS, userID string) (string, error) {
 	if alert.ID == "" {
 		alert.ID = uuid.New().String()
 	}
 
-	job := investigationJob{
+	job := contracts.InvestigationJob{
 		Alert:          alert,
 		SlackChannelID: channelID,
 		SlackThreadTS:  threadTS,

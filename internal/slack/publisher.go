@@ -2,8 +2,10 @@ package slack
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 	"github.com/slack-go/slack"
@@ -26,15 +28,45 @@ func NewPublisher(botToken string, logger *zap.Logger) *Publisher {
 	}
 }
 
+func (p *Publisher) postWithRetry(ctx context.Context, f func() error) error {
+	const maxRetries = 3
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		err := f()
+		if err == nil {
+			return nil
+		}
+		var rateLimited *slack.RateLimitedError
+		if errors.As(err, &rateLimited) && attempt < maxRetries {
+			delay := rateLimited.RetryAfter
+			if delay == 0 {
+				delay = time.Duration(attempt+1) * time.Second
+			}
+			select {
+			case <-time.After(delay):
+				continue
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+		return err
+	}
+	return nil
+}
+
 func (p *Publisher) PostInvestigationStarted(ctx context.Context, channelID string, investigationID string) (string, error) {
 	text := "Investigating... Sherlock is on the case."
 	if investigationID != "" {
 		text = fmt.Sprintf("Investigating [%s]... Sherlock is on the case.", investigationID)
 	}
 
-	_, ts, err := p.slackClient.PostMessageContext(ctx, channelID,
-		slack.MsgOptionText(text, false),
-	)
+	var ts string
+	err := p.postWithRetry(ctx, func() error {
+		var postErr error
+		_, ts, postErr = p.slackClient.PostMessageContext(ctx, channelID,
+			slack.MsgOptionText(text, false),
+		)
+		return postErr
+	})
 	if err != nil {
 		return "", fmt.Errorf("post investigation started: %w", err)
 	}
@@ -42,10 +74,13 @@ func (p *Publisher) PostInvestigationStarted(ctx context.Context, channelID stri
 }
 
 func (p *Publisher) PostEvidenceUpdate(ctx context.Context, channelID, threadTS string, message string) error {
-	_, _, err := p.slackClient.PostMessageContext(ctx, channelID,
-		slack.MsgOptionText(message, false),
-		slack.MsgOptionTS(threadTS),
-	)
+	err := p.postWithRetry(ctx, func() error {
+		_, _, postErr := p.slackClient.PostMessageContext(ctx, channelID,
+			slack.MsgOptionText(message, false),
+			slack.MsgOptionTS(threadTS),
+		)
+		return postErr
+	})
 	if err != nil {
 		return fmt.Errorf("post evidence update: %w", err)
 	}
@@ -55,10 +90,13 @@ func (p *Publisher) PostEvidenceUpdate(ctx context.Context, channelID, threadTS 
 func (p *Publisher) PostResult(ctx context.Context, channelID, threadTS string, result *contracts.InvestigationResult) error {
 	blocks := p.buildResultBlocks(result)
 
-	_, _, err := p.slackClient.PostMessageContext(ctx, channelID,
-		slack.MsgOptionBlocks(blocks...),
-		slack.MsgOptionTS(threadTS),
-	)
+	err := p.postWithRetry(ctx, func() error {
+		_, _, postErr := p.slackClient.PostMessageContext(ctx, channelID,
+			slack.MsgOptionBlocks(blocks...),
+			slack.MsgOptionTS(threadTS),
+		)
+		return postErr
+	})
 	if err != nil {
 		return fmt.Errorf("post result: %w", err)
 	}
@@ -84,7 +122,10 @@ func (p *Publisher) PostError(ctx context.Context, channelID, threadTS string, e
 		opts = append(opts, slack.MsgOptionTS(threadTS))
 	}
 
-	_, _, err := p.slackClient.PostMessageContext(ctx, channelID, opts...)
+	err := p.postWithRetry(ctx, func() error {
+		_, _, postErr := p.slackClient.PostMessageContext(ctx, channelID, opts...)
+		return postErr
+	})
 	if err != nil {
 		return fmt.Errorf("post error: %w", err)
 	}

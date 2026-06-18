@@ -9,27 +9,8 @@ import (
 )
 
 type InvestigationLookup interface {
-	FindActiveByFingerprint(ctx context.Context, fingerprint string, since time.Time) (*ActiveInvestigation, error)
+	FindActiveByFingerprint(ctx context.Context, fingerprint string, since time.Time) (*contracts.ActiveInvestigation, error)
 	LinkAlertToInvestigation(ctx context.Context, investigationID, alertID string) error
-}
-
-type ActiveInvestigation struct {
-	ID             string
-	Status         string
-	Headline       string
-	Confidence     float64
-	SlackChannelID string
-	SlackThreadTS  string
-	CreatedAt      time.Time
-	CompletedAt    *time.Time
-}
-
-type Result struct {
-	IsDuplicate      bool
-	ExistingID       string
-	ExistingHeadline string
-	ExistingChannel  string
-	ExistingThread   string
 }
 
 type Service struct {
@@ -46,9 +27,9 @@ func New(store InvestigationLookup, window time.Duration, logger *zap.Logger) *S
 	}
 }
 
-func (s *Service) Check(ctx context.Context, alert contracts.NormalizedAlert) (*Result, error) {
+func (s *Service) Check(ctx context.Context, alert contracts.NormalizedAlert) (*contracts.DedupResult, error) {
 	if alert.Fingerprint == "" {
-		return &Result{IsDuplicate: false}, nil
+		return &contracts.DedupResult{IsDuplicate: false}, nil
 	}
 
 	since := time.Now().UTC().Add(-s.window)
@@ -57,7 +38,7 @@ func (s *Service) Check(ctx context.Context, alert contracts.NormalizedAlert) (*
 		return nil, err
 	}
 	if existing == nil {
-		return &Result{IsDuplicate: false}, nil
+		return &contracts.DedupResult{IsDuplicate: false}, nil
 	}
 
 	if err := s.store.LinkAlertToInvestigation(ctx, existing.ID, alert.ID); err != nil {
@@ -68,7 +49,7 @@ func (s *Service) Check(ctx context.Context, alert contracts.NormalizedAlert) (*
 		)
 	}
 
-	return &Result{
+	return &contracts.DedupResult{
 		IsDuplicate:      true,
 		ExistingID:       existing.ID,
 		ExistingHeadline: existing.Headline,

@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -51,23 +52,25 @@ func (q *Queue) Publish(ctx context.Context, subject string, data []byte) error 
 	return nil
 }
 
-func (q *Queue) Subscribe(ctx context.Context, subject string, handler func(msg []byte) error) error {
+func (q *Queue) Subscribe(ctx context.Context, subject string, handler func(msg []byte, ack func(), nak func()) error) error {
 	consumer, err := q.stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
 		Durable:       sanitizeDurable(subject),
 		FilterSubject: subject,
 		AckPolicy:     jetstream.AckExplicitPolicy,
 		MaxDeliver:    3,
+		AckWait:       5 * time.Minute,
+		MaxAckPending: 10,
 	})
 	if err != nil {
 		return fmt.Errorf("creating consumer for %q: %w", subject, err)
 	}
 
 	cons, err := consumer.Consume(func(msg jetstream.Msg) {
-		if err := handler(msg.Data()); err != nil {
+		ack := func() { _ = msg.Ack() }
+		nak := func() { _ = msg.Nak() }
+		if err := handler(msg.Data(), ack, nak); err != nil {
 			_ = msg.Nak()
-			return
 		}
-		_ = msg.Ack()
 	})
 	if err != nil {
 		return fmt.Errorf("starting consumer for %q: %w", subject, err)

@@ -10,11 +10,19 @@ import (
 )
 
 type TimelineRepo struct {
-	db *DB
+	q Querier
 }
 
 func NewTimelineRepo(db *DB) *TimelineRepo {
-	return &TimelineRepo{db: db}
+	return &TimelineRepo{q: db.pool}
+}
+
+func (r *TimelineRepo) WithTx(tx pgx.Tx) *TimelineRepo {
+	return &TimelineRepo{q: tx}
+}
+
+func NewTimelineRepoTx(tx pgx.Tx) *TimelineRepo {
+	return &TimelineRepo{q: tx}
 }
 
 func (r *TimelineRepo) CreateBatch(ctx context.Context, events []contracts.TimelineEvent) error {
@@ -34,7 +42,7 @@ func (r *TimelineRepo) CreateBatch(ctx context.Context, events []contracts.Timel
 		)
 	}
 
-	br := r.db.pool.SendBatch(ctx, batch)
+	br := r.q.SendBatch(ctx, batch)
 	defer br.Close()
 	for range events {
 		if _, err := br.Exec(); err != nil {
@@ -45,7 +53,7 @@ func (r *TimelineRepo) CreateBatch(ctx context.Context, events []contracts.Timel
 }
 
 func (r *TimelineRepo) ListByInvestigation(ctx context.Context, investigationID string) ([]contracts.TimelineEvent, error) {
-	rows, err := r.db.pool.Query(ctx, `
+	rows, err := r.q.Query(ctx, `
 		SELECT id, investigation_id, timestamp, kind, source,
 		       narrative, evidence_ids, attributes
 		FROM timeline_events

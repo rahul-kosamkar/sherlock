@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
@@ -31,19 +32,11 @@ type BlobStore interface {
 }
 
 type DedupChecker interface {
-	Check(ctx context.Context, alert contracts.NormalizedAlert) (*DedupResult, error)
+	Check(ctx context.Context, alert contracts.NormalizedAlert) (*contracts.DedupResult, error)
 }
 
 type DedupNotifier interface {
 	PostDedupNotification(ctx context.Context, channelID, threadTS, existingID, alertValue string) error
-}
-
-type DedupResult struct {
-	IsDuplicate      bool
-	ExistingID       string
-	ExistingHeadline string
-	ExistingChannel  string
-	ExistingThread   string
 }
 
 type SuppressChecker interface {
@@ -60,13 +53,6 @@ type Gateway struct {
 	rateLimiter   func(http.Handler) http.Handler
 	logger        *zap.Logger
 	streamName    string
-}
-
-type investigationJob struct {
-	Alert          contracts.NormalizedAlert `json:"alert"`
-	SlackChannelID string                    `json:"slack_channel_id,omitempty"`
-	SlackThreadTS  string                    `json:"slack_thread_ts,omitempty"`
-	RequestedBy    string                    `json:"requested_by,omitempty"`
 }
 
 func NewGateway(publisher Publisher, blobStore BlobStore, logger *zap.Logger) *Gateway {
@@ -223,7 +209,11 @@ func (g *Gateway) handleWebhook(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		job := investigationJob{Alert: alerts[i]}
+		job := contracts.InvestigationJob{Alert: alerts[i]}
+		traceCarrier := propagation.MapCarrier{}
+		otel.GetTextMapPropagator().Inject(r.Context(), traceCarrier)
+		job.TraceParent = traceCarrier.Get("traceparent")
+		job.TraceState = traceCarrier.Get("tracestate")
 		data, err := json.Marshal(job)
 		if err != nil {
 			g.logger.Error("failed to marshal investigation job", zap.Error(err))

@@ -17,6 +17,7 @@ type OpenAIProvider struct {
 	temperature float32
 	maxTokens   int
 	timeout     time.Duration
+	client      *http.Client
 }
 
 func NewOpenAIProvider(cfg ProviderConfig) *OpenAIProvider {
@@ -35,6 +36,7 @@ func NewOpenAIProvider(cfg ProviderConfig) *OpenAIProvider {
 		temperature: cfg.Temperature,
 		maxTokens:   cfg.MaxTokens,
 		timeout:     timeout,
+		client:      &http.Client{Timeout: timeout},
 	}
 }
 
@@ -88,7 +90,7 @@ func (p *OpenAIProvider) Complete(ctx context.Context, req CompletionRequest) (*
 	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := p.client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("openai: request failed: %w", err)
 	}
@@ -99,11 +101,8 @@ func (p *OpenAIProvider) Complete(ctx context.Context, req CompletionRequest) (*
 		return nil, fmt.Errorf("openai: read response: %w", err)
 	}
 
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return nil, fmt.Errorf("openai: rate limited (429)")
-	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("openai: unexpected status %d: %s", resp.StatusCode, string(respBody))
+		return nil, NewLLMError("openai", resp.StatusCode, string(respBody))
 	}
 
 	var result struct {

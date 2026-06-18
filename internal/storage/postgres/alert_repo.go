@@ -11,11 +11,15 @@ import (
 )
 
 type AlertRepo struct {
-	db *DB
+	q Querier
 }
 
 func NewAlertRepo(db *DB) *AlertRepo {
-	return &AlertRepo{db: db}
+	return &AlertRepo{q: db.pool}
+}
+
+func (r *AlertRepo) WithTx(tx pgx.Tx) *AlertRepo {
+	return &AlertRepo{q: tx}
 }
 
 func (r *AlertRepo) Create(ctx context.Context, a *contracts.NormalizedAlert) error {
@@ -36,7 +40,7 @@ func (r *AlertRepo) Create(ctx context.Context, a *contracts.NormalizedAlert) er
 		return fmt.Errorf("marshal links: %w", err)
 	}
 
-	_, err = r.db.pool.Exec(ctx, `
+	_, err = r.q.Exec(ctx, `
 		INSERT INTO alerts (
 			id, tenant_id, source, status, severity, title, summary,
 			fingerprint, group_key, starts_at, ends_at,
@@ -53,7 +57,7 @@ func (r *AlertRepo) Create(ctx context.Context, a *contracts.NormalizedAlert) er
 }
 
 func (r *AlertRepo) GetByID(ctx context.Context, id string) (*contracts.NormalizedAlert, error) {
-	return r.scanAlert(r.db.pool.QueryRow(ctx, `
+	return r.scanAlert(r.q.QueryRow(ctx, `
 		SELECT id, tenant_id, source, status, severity, title, summary,
 		       fingerprint, group_key, starts_at, ends_at,
 		       labels, annotations, entity_hints, links, raw_ref
@@ -61,7 +65,7 @@ func (r *AlertRepo) GetByID(ctx context.Context, id string) (*contracts.Normaliz
 }
 
 func (r *AlertRepo) GetByFingerprint(ctx context.Context, tenantID, fingerprint string) (*contracts.NormalizedAlert, error) {
-	return r.scanAlert(r.db.pool.QueryRow(ctx, `
+	return r.scanAlert(r.q.QueryRow(ctx, `
 		SELECT id, tenant_id, source, status, severity, title, summary,
 		       fingerprint, group_key, starts_at, ends_at,
 		       labels, annotations, entity_hints, links, raw_ref
@@ -79,7 +83,7 @@ func (r *AlertRepo) scanAlert(row pgx.Row) (*contracts.NormalizedAlert, error) {
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("alert not found")
+			return nil, fmt.Errorf("alert: %w", contracts.ErrNotFound)
 		}
 		return nil, fmt.Errorf("scan alert: %w", err)
 	}

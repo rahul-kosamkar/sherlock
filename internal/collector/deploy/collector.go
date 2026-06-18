@@ -335,6 +335,40 @@ func (c *Collector) fetchDeploymentStatus(ctx context.Context, statusesURL strin
 	return statuses[0].State
 }
 
+func (c *Collector) doWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
+	const maxRetries = 3
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = err
+			if attempt < maxRetries {
+				time.Sleep(time.Duration(attempt+1) * time.Second)
+				continue
+			}
+			return nil, lastErr
+		}
+		if resp.StatusCode == 429 || resp.StatusCode >= 500 {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
+			if attempt < maxRetries {
+				retryAfter := resp.Header.Get("Retry-After")
+				delay := time.Duration(attempt+1) * time.Second
+				if retryAfter != "" {
+					if secs, err := strconv.Atoi(retryAfter); err == nil {
+						delay = time.Duration(secs) * time.Second
+					}
+				}
+				time.Sleep(delay)
+				continue
+			}
+			return nil, lastErr
+		}
+		return resp, nil
+	}
+	return nil, lastErr
+}
+
 func (c *Collector) githubGet(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -343,7 +377,7 @@ func (c *Collector) githubGet(ctx context.Context, url string) ([]byte, error) {
 	req.Header.Set("Authorization", "Bearer "+c.githubToken)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +397,7 @@ func (c *Collector) gitlabGet(ctx context.Context, url string) ([]byte, error) {
 	}
 	req.Header.Set("PRIVATE-TOKEN", c.gitlabToken)
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithRetry(ctx, req)
 	if err != nil {
 		return nil, err
 	}

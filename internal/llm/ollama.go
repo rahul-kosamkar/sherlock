@@ -16,6 +16,7 @@ type OllamaProvider struct {
 	temperature float32
 	maxTokens   int
 	timeout     time.Duration
+	client      *http.Client
 }
 
 func NewOllamaProvider(cfg ProviderConfig) *OllamaProvider {
@@ -33,6 +34,7 @@ func NewOllamaProvider(cfg ProviderConfig) *OllamaProvider {
 		temperature: cfg.Temperature,
 		maxTokens:   cfg.MaxTokens,
 		timeout:     timeout,
+		client:      &http.Client{Timeout: timeout},
 	}
 }
 
@@ -89,7 +91,7 @@ func (p *OllamaProvider) Complete(ctx context.Context, req CompletionRequest) (*
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := p.client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ollama: request failed: %w", err)
 	}
@@ -101,7 +103,7 @@ func (p *OllamaProvider) Complete(ctx context.Context, req CompletionRequest) (*
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("ollama: unexpected status %d: %s", resp.StatusCode, string(respBody))
+		return nil, NewLLMError("ollama", resp.StatusCode, string(respBody))
 	}
 
 	var result struct {

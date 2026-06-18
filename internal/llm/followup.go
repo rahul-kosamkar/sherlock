@@ -150,6 +150,18 @@ func (f *FollowUpExecutor) executeGitHubFiles(ctx context.Context, fu FollowUpQu
 	}
 
 	paths := parseCSV(fu.Value)
+
+	var safePaths []string
+	for _, p := range paths {
+		p = strings.TrimSpace(p)
+		if p == "" || strings.Contains(p, "..") || strings.HasPrefix(p, "/") {
+			f.logger.Warn("rejecting unsafe file path", zap.String("path", p))
+			continue
+		}
+		safePaths = append(safePaths, p)
+	}
+	paths = safePaths
+
 	workload := resolveWorkload(alert)
 
 	repo, ok := f.gitProv.ResolveRepo(workload)

@@ -11,6 +11,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -23,6 +24,7 @@ type HTTPTransport struct {
 	signingSecret string
 	logger        *zap.Logger
 	server        *http.Server
+	wg            sync.WaitGroup
 }
 
 func NewHTTPTransport(address string, signingSecret string, handler Handler, logger *zap.Logger) *HTTPTransport {
@@ -68,7 +70,20 @@ func (t *HTTPTransport) Start(_ context.Context) error {
 func (t *HTTPTransport) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	return t.server.Shutdown(ctx)
+	err := t.server.Shutdown(ctx)
+
+	done := make(chan struct{})
+	go func() {
+		t.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(30 * time.Second):
+		t.logger.Warn("timed out waiting for in-flight Slack handlers")
+	}
+
+	return err
 }
 
 func (t *HTTPTransport) handleSlashCommand(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +123,9 @@ func (t *HTTPTransport) handleSlashCommand(w http.ResponseWriter, r *http.Reques
 		"text":          "Acknowledged. Sherlock is on the case.",
 	})
 
+	t.wg.Add(1)
 	go func() {
+		defer t.wg.Done()
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		if err := t.handler.HandleSlashCommand(ctx, cmd); err != nil {
@@ -172,7 +189,9 @@ func (t *HTTPTransport) handleInteraction(w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(http.StatusOK)
 
+	t.wg.Add(1)
 	go func() {
+		defer t.wg.Done()
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 
@@ -257,7 +276,9 @@ func (t *HTTPTransport) handleEvent(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	if envelope.Type == "event_callback" && envelope.Event.Type == "app_mention" {
+		t.wg.Add(1)
 		go func() {
+			defer t.wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 			defer cancel()
 			if err := t.handler.HandleAppMention(ctx, envelope.Event.Channel, envelope.Event.User, envelope.Event.Text); err != nil {

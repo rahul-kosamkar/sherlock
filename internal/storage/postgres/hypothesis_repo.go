@@ -10,11 +10,19 @@ import (
 )
 
 type HypothesisRepo struct {
-	db *DB
+	q Querier
 }
 
 func NewHypothesisRepo(db *DB) *HypothesisRepo {
-	return &HypothesisRepo{db: db}
+	return &HypothesisRepo{q: db.pool}
+}
+
+func (r *HypothesisRepo) WithTx(tx pgx.Tx) *HypothesisRepo {
+	return &HypothesisRepo{q: tx}
+}
+
+func NewHypothesisRepoTx(tx pgx.Tx) *HypothesisRepo {
+	return &HypothesisRepo{q: tx}
 }
 
 func (r *HypothesisRepo) CreateBatch(ctx context.Context, investigationID string, hypotheses []contracts.Hypothesis) error {
@@ -34,7 +42,7 @@ func (r *HypothesisRepo) CreateBatch(ctx context.Context, investigationID string
 		)
 	}
 
-	br := r.db.pool.SendBatch(ctx, batch)
+	br := r.q.SendBatch(ctx, batch)
 	defer br.Close()
 	for range hypotheses {
 		if _, err := br.Exec(); err != nil {
@@ -45,7 +53,7 @@ func (r *HypothesisRepo) CreateBatch(ctx context.Context, investigationID string
 }
 
 func (r *HypothesisRepo) ListByInvestigation(ctx context.Context, investigationID string) ([]contracts.Hypothesis, error) {
-	rows, err := r.db.pool.Query(ctx, `
+	rows, err := r.q.Query(ctx, `
 		SELECT id, title, narrative, cause_category, confidence,
 		       supporting, contradicting, suggested_fixes
 		FROM hypotheses

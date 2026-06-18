@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 	"github.com/rahulkosamkar/sherlock/internal/llm"
+	"github.com/rahulkosamkar/sherlock/internal/metrics"
 	"go.uber.org/zap"
 )
 
@@ -90,8 +91,11 @@ func (e *LLMEngine) rankWithLLM(ctx context.Context, graph contracts.Investigati
 		UserPrompt:   pass1Prompt,
 	})
 	if err != nil {
+		metrics.LLMCallsTotal.WithLabelValues(e.provider.Name(), "error").Inc()
 		return nil, fmt.Errorf("LLM pass 1 failed: %w", err)
 	}
+	metrics.LLMCallsTotal.WithLabelValues(e.provider.Name(), "success").Inc()
+	metrics.LLMCallDuration.WithLabelValues(e.provider.Name()).Observe(pass1Resp.Latency.Seconds())
 
 	analysis := llm.ParseAnalysis(pass1Resp.Content)
 	analysis.PassCount = 1
@@ -142,9 +146,12 @@ func (e *LLMEngine) rankWithLLM(ctx context.Context, graph contracts.Investigati
 			UserPrompt:   deepPrompt,
 		})
 		if err != nil {
+			metrics.LLMCallsTotal.WithLabelValues(e.provider.Name(), "error").Inc()
 			e.logger.Warn("LLM deep pass failed", zap.Int("pass", pass), zap.Error(err))
 			break
 		}
+		metrics.LLMCallsTotal.WithLabelValues(e.provider.Name(), "success").Inc()
+		metrics.LLMCallDuration.WithLabelValues(e.provider.Name()).Observe(deepResp.Latency.Seconds())
 
 		analysis = llm.ParseAnalysis(deepResp.Content)
 		analysis.PassCount = pass

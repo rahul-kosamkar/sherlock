@@ -10,6 +10,7 @@ import (
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 	"github.com/rahulkosamkar/sherlock/internal/slack/transport"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 type InvestigationEnqueuer interface {
@@ -91,7 +92,7 @@ func NewApp(cfg AppConfig, enqueuer InvestigationEnqueuer, publisher *Publisher,
 		}
 		addr := cfg.HTTPAddress
 		if addr == "" {
-			addr = ":3000"
+			addr = ":3001"
 		}
 		st := transport.NewSocketTransport(cfg.AppToken, cfg.BotToken, a, logger)
 		ht := transport.NewHTTPTransport(addr, cfg.SigningSecret, a, logger)
@@ -105,12 +106,14 @@ func NewApp(cfg AppConfig, enqueuer InvestigationEnqueuer, publisher *Publisher,
 }
 
 func (a *App) Start(ctx context.Context) error {
+	g, ctx := errgroup.WithContext(ctx)
 	for _, t := range a.transports {
-		if err := t.Start(ctx); err != nil {
-			return fmt.Errorf("transport start failed: %w", err)
-		}
+		t := t
+		g.Go(func() error {
+			return t.Start(ctx)
+		})
 	}
-	return nil
+	return g.Wait()
 }
 
 func (a *App) Stop() error {

@@ -39,16 +39,20 @@ type ProviderConfig struct {
 }
 
 func NewProvider(cfg ProviderConfig) (Provider, error) {
+	var inner Provider
 	switch cfg.Provider {
 	case "openai":
-		return NewOpenAIProvider(cfg), nil
+		inner = NewOpenAIProvider(cfg)
 	case "vertex":
-		return NewVertexProvider(cfg), nil
+		inner = NewVertexProvider(cfg)
 	case "anthropic":
-		return NewAnthropicProvider(cfg), nil
+		inner = NewAnthropicProvider(cfg)
 	case "ollama":
-		return NewOllamaProvider(cfg), nil
+		inner = NewOllamaProvider(cfg)
 	default:
 		return nil, fmt.Errorf("unsupported LLM provider: %q", cfg.Provider)
 	}
+
+	retried := NewRetryProvider(inner, 3, 1*time.Second)
+	return NewCircuitBreakerProvider(retried, 5, 30*time.Second), nil
 }

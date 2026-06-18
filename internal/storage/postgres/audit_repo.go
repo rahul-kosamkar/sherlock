@@ -5,15 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 )
 
 type AuditRepo struct {
-	db *DB
+	q Querier
 }
 
 func NewAuditRepo(db *DB) *AuditRepo {
-	return &AuditRepo{db: db}
+	return &AuditRepo{q: db.pool}
+}
+
+func (r *AuditRepo) WithTx(tx pgx.Tx) *AuditRepo {
+	return &AuditRepo{q: tx}
 }
 
 func (r *AuditRepo) Create(ctx context.Context, entry *contracts.AuditEntry) error {
@@ -22,7 +27,7 @@ func (r *AuditRepo) Create(ctx context.Context, entry *contracts.AuditEntry) err
 		return fmt.Errorf("marshal metadata: %w", err)
 	}
 
-	_, err = r.db.pool.Exec(ctx, `
+	_, err = r.q.Exec(ctx, `
 		INSERT INTO audit_log (id, tenant_id, actor, action, target, metadata, timestamp)
 		VALUES ($1,$2,$3,$4,$5,$6,$7)`,
 		entry.ID, entry.TenantID, entry.Actor, entry.Action,
@@ -35,7 +40,7 @@ func (r *AuditRepo) Create(ctx context.Context, entry *contracts.AuditEntry) err
 }
 
 func (r *AuditRepo) List(ctx context.Context, tenantID string, limit int) ([]contracts.AuditEntry, error) {
-	rows, err := r.db.pool.Query(ctx, `
+	rows, err := r.q.Query(ctx, `
 		SELECT id, tenant_id, actor, action, target, metadata, timestamp
 		FROM audit_log
 		WHERE tenant_id = $1

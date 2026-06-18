@@ -9,15 +9,22 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
-	"github.com/rahulkosamkar/sherlock/internal/dedup"
 )
 
 type InvestigationRepo struct {
-	db *DB
+	q Querier
 }
 
 func NewInvestigationRepo(db *DB) *InvestigationRepo {
-	return &InvestigationRepo{db: db}
+	return &InvestigationRepo{q: db.pool}
+}
+
+func (r *InvestigationRepo) WithTx(tx pgx.Tx) *InvestigationRepo {
+	return &InvestigationRepo{q: tx}
+}
+
+func NewInvestigationRepoTx(tx pgx.Tx) *InvestigationRepo {
+	return &InvestigationRepo{q: tx}
 }
 
 func (r *InvestigationRepo) Create(ctx context.Context, inv *contracts.Investigation) error {
@@ -26,7 +33,7 @@ func (r *InvestigationRepo) Create(ctx context.Context, inv *contracts.Investiga
 		return fmt.Errorf("marshal targets: %w", err)
 	}
 
-	_, err = r.db.pool.Exec(ctx, `
+	_, err = r.q.Exec(ctx, `
 		INSERT INTO investigations (
 			id, tenant_id, status, alert_ids, targets,
 			time_from, time_to, headline, confidence,
@@ -48,7 +55,7 @@ func (r *InvestigationRepo) GetByID(ctx context.Context, id string) (*contracts.
 	var inv contracts.Investigation
 	var targetsRaw []byte
 
-	err := r.db.pool.QueryRow(ctx, `
+	err := r.q.QueryRow(ctx, `
 		SELECT id, tenant_id, status, alert_ids, targets,
 		       time_from, time_to, headline, confidence,
 		       slack_channel_id, slack_thread_ts,
@@ -62,7 +69,7 @@ func (r *InvestigationRepo) GetByID(ctx context.Context, id string) (*contracts.
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("investigation %s not found", id)
+			return nil, fmt.Errorf("investigation %s: %w", id, contracts.ErrNotFound)
 		}
 		return nil, fmt.Errorf("query investigation: %w", err)
 	}
@@ -75,7 +82,7 @@ func (r *InvestigationRepo) GetByID(ctx context.Context, id string) (*contracts.
 }
 
 func (r *InvestigationRepo) UpdateStatus(ctx context.Context, id string, status contracts.InvestigationStatus) error {
-	tag, err := r.db.pool.Exec(ctx,
+	tag, err := r.q.Exec(ctx,
 		`UPDATE investigations SET status = $1, updated_at = $2 WHERE id = $3`,
 		status, time.Now().UTC(), id,
 	)
@@ -83,14 +90,14 @@ func (r *InvestigationRepo) UpdateStatus(ctx context.Context, id string, status 
 		return fmt.Errorf("update status: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("investigation %s not found", id)
+		return fmt.Errorf("investigation %s: %w", id, contracts.ErrNotFound)
 	}
 	return nil
 }
 
 func (r *InvestigationRepo) Complete(ctx context.Context, id string, headline string, confidence float64) error {
 	now := time.Now().UTC()
-	tag, err := r.db.pool.Exec(ctx, `
+	tag, err := r.q.Exec(ctx, `
 		UPDATE investigations
 		SET status = $1, headline = $2, confidence = $3,
 		    updated_at = $4, completed_at = $5
@@ -101,15 +108,15 @@ func (r *InvestigationRepo) Complete(ctx context.Context, id string, headline st
 		return fmt.Errorf("complete investigation: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("investigation %s not found", id)
+		return fmt.Errorf("investigation %s: %w", id, contracts.ErrNotFound)
 	}
 	return nil
 }
 
-func (r *InvestigationRepo) FindActiveByFingerprint(ctx context.Context, fingerprint string, since time.Time) (*dedup.ActiveInvestigation, error) {
-	var inv dedup.ActiveInvestigation
+func (r *InvestigationRepo) FindActiveByFingerprint(ctx context.Context, fingerprint string, since time.Time) (*contracts.ActiveInvestigation, error) {
+	var inv contracts.ActiveInvestigation
 
-	err := r.db.pool.QueryRow(ctx, `
+	err := r.q.QueryRow(ctx, `
 		SELECT i.id, i.status, i.headline, i.confidence,
 		       i.slack_channel_id, i.slack_thread_ts,
 		       i.created_at, i.completed_at
@@ -137,7 +144,7 @@ func (r *InvestigationRepo) FindActiveByFingerprint(ctx context.Context, fingerp
 }
 
 func (r *InvestigationRepo) LinkAlertToInvestigation(ctx context.Context, investigationID, alertID string) error {
-	tag, err := r.db.pool.Exec(ctx, `
+	tag, err := r.q.Exec(ctx, `
 		UPDATE investigations
 		SET alert_ids = array_append(alert_ids, $1), updated_at = $2
 		WHERE id = $3`,
@@ -147,7 +154,7 @@ func (r *InvestigationRepo) LinkAlertToInvestigation(ctx context.Context, invest
 		return fmt.Errorf("link alert to investigation: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("investigation %s not found", investigationID)
+		return fmt.Errorf("investigation %s: %w", investigationID, contracts.ErrNotFound)
 	}
 	return nil
 }

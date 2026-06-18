@@ -17,12 +17,14 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rahulkosamkar/sherlock/api"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"github.com/rahulkosamkar/sherlock/internal/audit"
 	"github.com/rahulkosamkar/sherlock/internal/collector"
 	deploycollector "github.com/rahulkosamkar/sherlock/internal/collector/deploy"
 	k8scollector "github.com/rahulkosamkar/sherlock/internal/collector/kubernetes"
 	lokicollector "github.com/rahulkosamkar/sherlock/internal/collector/loki"
 	promcollector "github.com/rahulkosamkar/sherlock/internal/collector/prometheus"
+	"github.com/jackc/pgx/v5"
 	"github.com/rahulkosamkar/sherlock/internal/config"
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 	"github.com/rahulkosamkar/sherlock/internal/correlation"
@@ -236,32 +238,33 @@ func run(logger *zap.Logger) error {
 		slackPublisher = sherlockslack.NewPublisher(cfg.Slack.BotToken, logger)
 	}
 
-	orchestratorCfg := investigation.OrchestratorConfig{
-		MaxConcurrent: cfg.Investigation.MaxConcurrent,
-		Timeout:       cfg.Investigation.Timeout,
-		StreamName:    cfg.NATS.StreamName,
-		LLMEnabled:    cfg.LLM.Enabled,
+	deps := investigation.OrchestratorDeps{
+		Investigations: investigationRepo,
+		Evidence:       evidenceRepo,
+		Timelines:      timelineRepo,
+		Hypotheses:     hypothesisRepo,
+		Alerts:         alertRepo,
+		Collectors:     collectorRegistry,
+		Correlator:     correlationEngine,
+		RCA:            rcaEngine,
+		Timeline:       timelineBuilder,
+		Entity:         &entityResolverAdapter{resolver: entityResolver},
+		Slack:          slackPublisher,
+		Audit:          auditLogger,
+		Consumer:       q,
+		Logger:         logger,
+		TxBeginner:     &txBeginnerAdapter{db: db},
+		TxRepos:        &txRepoFactoryAdapter{},
 	}
 
-	entityAdapter := &entityResolverAdapter{resolver: entityResolver}
-
-	orch := investigation.NewOrchestrator(
-		orchestratorCfg,
-		investigationRepo,
-		evidenceRepo,
-		timelineRepo,
-		hypothesisRepo,
-		alertRepo,
-		collectorRegistry,
-		correlationEngine,
-		rcaEngine,
-		timelineBuilder,
-		entityAdapter,
-		slackPublisher,
-		auditLogger,
-		q,
-		logger,
-	)
+	var orchOpts []investigation.Option
+	if cfg.Investigation.MaxConcurrent > 0 {
+		orchOpts = append(orchOpts, investigation.WithMaxConcurrent(cfg.Investigation.MaxConcurrent))
+	}
+	if cfg.Investigation.Timeout > 0 {
+		orchOpts = append(orchOpts, investigation.WithTimeout(cfg.Investigation.Timeout))
+	}
+	orchOpts = append(orchOpts, investigation.WithBlobStore(objStore))
 
 	if cfg.Remediation.Enabled {
 		remEngine := remediation.New(logger)
@@ -273,7 +276,7 @@ func run(logger *zap.Logger) error {
 		} else {
 			remEngine.LoadDefaults()
 		}
-		orch.SetRemediation(remEngine)
+		orchOpts = append(orchOpts, investigation.WithRemediation(remEngine))
 		logger.Info("remediation engine enabled")
 	}
 
@@ -314,7 +317,7 @@ func run(logger *zap.Logger) error {
 				llmEngine.SetNotifier(slackPublisher)
 			}
 
-			orch.SetLLMEngine(llmEngine)
+			orchOpts = append(orchOpts, investigation.WithLLMEngine(llmEngine))
 			logger.Info("LLM-powered RCA engine enabled",
 				zap.String("provider", cfg.LLM.Provider),
 				zap.String("model", cfg.LLM.Model),
@@ -324,6 +327,8 @@ func run(logger *zap.Logger) error {
 		}
 	}
 
+	orch := investigation.NewOrchestrator(deps, orchOpts...)
+
 	go func() {
 		if err := orch.Start(ctx, cfg.NATS.StreamName); err != nil {
 			logger.Error("orchestrator failed", zap.Error(err))
@@ -332,12 +337,14 @@ func run(logger *zap.Logger) error {
 
 	gateway := receiver.NewGateway(q, objStore, logger)
 	rl := httputil.NewIPRateLimiter(rate.Limit(cfg.Server.RateLimitRPS), cfg.Server.RateLimitBurst)
+	rl.StartCleanup()
+	defer rl.Stop()
 	gateway.SetRateLimiter(rl.Middleware)
 	if cfg.Receivers.Grafana.Enabled {
 		gateway.Register(grafana.New(cfg.Receivers.Grafana.HMACSecret))
 	}
 	if cfg.Receivers.Alertmanager.Enabled {
-		gateway.Register(alertmanager.New())
+		gateway.Register(alertmanager.New(cfg.Receivers.Alertmanager.Secret))
 	}
 
 	if cfg.Dedup.Enabled {
@@ -363,7 +370,7 @@ func run(logger *zap.Logger) error {
 	}
 
 	router := chi.NewRouter()
-	router.Use(middleware.Logger)
+	router.Use(zapRequestLogger(logger))
 	router.Use(middleware.Recoverer)
 	router.Mount("/", gateway.Routes())
 	router.Mount("/", apiServer.Routes())
@@ -392,7 +399,7 @@ func run(logger *zap.Logger) error {
 
 	srv := &http.Server{
 		Addr:         cfg.Server.Address,
-		Handler:      router,
+		Handler:      otelhttp.NewHandler(router, "sherlock"),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -431,6 +438,25 @@ func run(logger *zap.Logger) error {
 
 	logger.Info("sherlock stopped")
 	return nil
+}
+
+func zapRequestLogger(logger *zap.Logger) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			defer func() {
+				logger.Info("http request",
+					zap.String("method", r.Method),
+					zap.String("path", r.URL.Path),
+					zap.Int("status", ww.Status()),
+					zap.Duration("duration", time.Since(start)),
+					zap.String("remote_addr", r.RemoteAddr),
+				)
+			}()
+			next.ServeHTTP(ww, r)
+		})
+	}
 }
 
 type entityResolverAdapter struct {
@@ -475,18 +501,45 @@ type dedupCheckerAdapter struct {
 	svc *dedup.Service
 }
 
-func (a *dedupCheckerAdapter) Check(ctx context.Context, alert contracts.NormalizedAlert) (*receiver.DedupResult, error) {
-	result, err := a.svc.Check(ctx, alert)
+func (a *dedupCheckerAdapter) Check(ctx context.Context, alert contracts.NormalizedAlert) (*contracts.DedupResult, error) {
+	return a.svc.Check(ctx, alert)
+}
+
+type txBeginnerAdapter struct {
+	db *postgres.DB
+}
+
+func (a *txBeginnerAdapter) BeginTx(ctx context.Context) (investigation.Tx, error) {
+	tx, err := a.db.BeginTx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &receiver.DedupResult{
-		IsDuplicate:      result.IsDuplicate,
-		ExistingID:       result.ExistingID,
-		ExistingHeadline: result.ExistingHeadline,
-		ExistingChannel:  result.ExistingChannel,
-		ExistingThread:   result.ExistingThread,
-	}, nil
+	return &pgxTxAdapter{tx: tx}, nil
+}
+
+type pgxTxAdapter struct {
+	tx pgx.Tx
+}
+
+func (a *pgxTxAdapter) Commit(ctx context.Context) error   { return a.tx.Commit(ctx) }
+func (a *pgxTxAdapter) Rollback(ctx context.Context) error { return a.tx.Rollback(ctx) }
+
+type txRepoFactoryAdapter struct{}
+
+func (a *txRepoFactoryAdapter) InvestigationRepoTx(tx investigation.Tx) investigation.InvestigationStore {
+	return postgres.NewInvestigationRepoTx(tx.(*pgxTxAdapter).tx)
+}
+
+func (a *txRepoFactoryAdapter) EvidenceRepoTx(tx investigation.Tx) investigation.EvidenceStore {
+	return postgres.NewEvidenceRepoTx(tx.(*pgxTxAdapter).tx)
+}
+
+func (a *txRepoFactoryAdapter) TimelineRepoTx(tx investigation.Tx) investigation.TimelineStore {
+	return postgres.NewTimelineRepoTx(tx.(*pgxTxAdapter).tx)
+}
+
+func (a *txRepoFactoryAdapter) HypothesisRepoTx(tx investigation.Tx) investigation.HypothesisStore {
+	return postgres.NewHypothesisRepoTx(tx.(*pgxTxAdapter).tx)
 }
 
 func newMigrator(dsn string) (*migrate.Migrate, error) {

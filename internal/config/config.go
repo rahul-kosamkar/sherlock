@@ -33,10 +33,11 @@ type DedupConfig struct {
 }
 
 type ServerConfig struct {
-	Address        string  `yaml:"address"`
-	RateLimitRPS   float64 `yaml:"rate_limit_rps"`
-	RateLimitBurst int     `yaml:"rate_limit_burst"`
-	APIKey         string  `yaml:"api_key"`
+	Address           string  `yaml:"address"`
+	RateLimitRPS      float64 `yaml:"rate_limit_rps"`
+	RateLimitBurst    int     `yaml:"rate_limit_burst"`
+	APIKey            string  `yaml:"api_key"`
+	StrictWebhookAuth bool    `yaml:"strict_webhook_auth"`
 }
 
 type PostgresConfig struct {
@@ -97,7 +98,8 @@ type GrafanaReceiverConfig struct {
 }
 
 type AlertmanagerReceiverConfig struct {
-	Enabled bool `yaml:"enabled"`
+	Enabled bool   `yaml:"enabled"`
+	Secret  string `yaml:"secret"`
 }
 
 type GitHubReceiverConfig struct {
@@ -323,6 +325,12 @@ func applyEnvOverrides(cfg *Config) {
 	if v := os.Getenv("SHERLOCK_GITLAB_SECRET_TOKEN"); v != "" {
 		cfg.Receivers.GitLab.SecretToken = v
 	}
+	if v := os.Getenv("SHERLOCK_ALERTMANAGER_SECRET"); v != "" {
+		cfg.Receivers.Alertmanager.Secret = v
+	}
+	if v := os.Getenv("SHERLOCK_STRICT_WEBHOOK_AUTH"); v != "" {
+		cfg.Server.StrictWebhookAuth = strings.EqualFold(v, "true")
+	}
 	if v := os.Getenv("SHERLOCK_INVESTIGATION_TIMEOUT"); v != "" {
 		if d, err := time.ParseDuration(v); err == nil {
 			cfg.Investigation.Timeout = d
@@ -438,6 +446,20 @@ func validate(cfg *Config) error {
 	mode := cfg.Slack.Mode
 	if mode != "socket" && mode != "http" && mode != "both" {
 		return fmt.Errorf("slack.mode must be one of: socket, http, both")
+	}
+	if cfg.Server.StrictWebhookAuth {
+		if cfg.Receivers.Alertmanager.Enabled && cfg.Receivers.Alertmanager.Secret == "" {
+			return fmt.Errorf("strict_webhook_auth is enabled but alertmanager receiver has no secret configured")
+		}
+		if cfg.Receivers.Grafana.Enabled && cfg.Receivers.Grafana.HMACSecret == "" {
+			return fmt.Errorf("strict_webhook_auth is enabled but grafana receiver has no hmac_secret configured")
+		}
+		if cfg.Receivers.GitHub.Enabled && cfg.Receivers.GitHub.WebhookSecret == "" {
+			return fmt.Errorf("strict_webhook_auth is enabled but github receiver has no webhook_secret configured")
+		}
+		if cfg.Receivers.GitLab.Enabled && cfg.Receivers.GitLab.SecretToken == "" {
+			return fmt.Errorf("strict_webhook_auth is enabled but gitlab receiver has no secret_token configured")
+		}
 	}
 	return nil
 }

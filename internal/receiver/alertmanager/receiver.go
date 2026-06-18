@@ -2,6 +2,7 @@ package alertmanager
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -36,13 +37,23 @@ type alert struct {
 	Fingerprint  string            `json:"fingerprint"`
 }
 
-type Receiver struct{}
+type Receiver struct {
+	secret string
+}
 
-func New() *Receiver { return &Receiver{} }
+func New(secret string) *Receiver { return &Receiver{secret: secret} }
 
 func (r *Receiver) Source() string { return "alertmanager" }
 
-func (r *Receiver) Verify(_ context.Context, _ http.Header, _ []byte) error {
+func (r *Receiver) Verify(_ context.Context, headers http.Header, _ []byte) error {
+	if r.secret == "" {
+		return nil
+	}
+	auth := headers.Get("Authorization")
+	expected := "Bearer " + r.secret
+	if subtle.ConstantTimeCompare([]byte(auth), []byte(expected)) != 1 {
+		return fmt.Errorf("invalid or missing bearer token")
+	}
 	return nil
 }
 

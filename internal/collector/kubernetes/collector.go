@@ -3,11 +3,13 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -54,24 +56,37 @@ func New(kubeconfig string, inCluster bool, log *zap.Logger) (*Collector, error)
 func (c *Collector) Name() string { return sourceName }
 
 func (c *Collector) Collect(ctx context.Context, req contracts.CollectRequest) ([]contracts.Evidence, error) {
-	evidence := make([]contracts.Evidence, 0, len(req.Targets))
+	var (
+		mu       sync.Mutex
+		evidence []contracts.Evidence
+	)
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(5)
 
 	for _, target := range req.Targets {
 		if !isK8sTarget(target) {
 			continue
 		}
-
-		ev, err := c.collectForTarget(ctx, req, target)
-		if err != nil {
-			c.log.Warn("failed to collect for target",
-				zap.String("target", target.Kind+"/"+target.Namespace+"/"+target.Name),
-				zap.Error(err),
-			)
-			continue
-		}
-		evidence = append(evidence, ev...)
+		g.Go(func() error {
+			ev, err := c.collectForTarget(gctx, req, target)
+			if err != nil {
+				c.log.Warn("failed to collect for target",
+					zap.String("target", target.Kind+"/"+target.Namespace+"/"+target.Name),
+					zap.Error(err),
+				)
+				return nil
+			}
+			mu.Lock()
+			evidence = append(evidence, ev...)
+			mu.Unlock()
+			return nil
+		})
 	}
 
+	if err := g.Wait(); err != nil {
+		return evidence, err
+	}
 	return evidence, nil
 }
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 
 	"go.uber.org/zap"
@@ -101,45 +103,74 @@ func (p *GitHubProvider) FetchFiles(ctx context.Context, repo string, paths []st
 }
 
 func (p *GitHubProvider) fetchFile(ctx context.Context, repo, path string) (string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s?ref=%s",
-		p.org, repo, path, p.defaultBranch)
+	reqURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/contents/%s?ref=%s",
+		url.PathEscape(p.org), url.PathEscape(repo), path, url.QueryEscape(p.defaultBranch))
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", fmt.Errorf("building request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+p.token)
-	req.Header.Set("Accept", "application/vnd.github.v3.raw")
+	const maxRetries = 3
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
+		if err != nil {
+			return "", fmt.Errorf("building request: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+p.token)
+		req.Header.Set("Accept", "application/vnd.github.v3.raw")
 
-	resp, err := p.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("fetching %s: %w", path, err)
-	}
-	defer resp.Body.Close()
+		resp, err := p.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("fetching %s: %w", path, err)
+			if attempt < maxRetries {
+				time.Sleep(time.Duration(attempt+1) * time.Second)
+				continue
+			}
+			return "", lastErr
+		}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return "", fmt.Errorf("file not found: %s", path)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status %d for %s", resp.StatusCode, path)
-	}
+		if resp.StatusCode == 429 || resp.StatusCode >= 500 {
+			resp.Body.Close()
+			lastErr = fmt.Errorf("HTTP %d for %s", resp.StatusCode, path)
+			if attempt < maxRetries {
+				retryAfter := resp.Header.Get("Retry-After")
+				delay := time.Duration(attempt+1) * time.Second
+				if retryAfter != "" {
+					if secs, parseErr := strconv.Atoi(retryAfter); parseErr == nil {
+						delay = time.Duration(secs) * time.Second
+					}
+				}
+				time.Sleep(delay)
+				continue
+			}
+			return "", lastErr
+		}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("reading response for %s: %w", path, err)
-	}
+		if resp.StatusCode == http.StatusNotFound {
+			resp.Body.Close()
+			return "", fmt.Errorf("file not found: %s", path)
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return "", fmt.Errorf("unexpected status %d for %s", resp.StatusCode, path)
+		}
 
-	content := string(body)
-	if len(content) > p.maxFileSize {
-		p.logger.Warn("truncating oversized file",
-			zap.String("path", path),
-			zap.Int("original_size", len(content)),
-			zap.Int("max_size", p.maxFileSize),
-		)
-		content = content[:p.maxFileSize]
-	}
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return "", fmt.Errorf("reading response for %s: %w", path, err)
+		}
 
-	return content, nil
+		content := string(body)
+		if len(content) > p.maxFileSize {
+			p.logger.Warn("truncating oversized file",
+				zap.String("path", path),
+				zap.Int("original_size", len(content)),
+				zap.Int("max_size", p.maxFileSize),
+			)
+			content = content[:p.maxFileSize]
+		}
+
+		return content, nil
+	}
+	return "", lastErr
 }
 
 // NoopProvider is a no-op fallback used when Git integration is disabled.

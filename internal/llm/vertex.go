@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"google.golang.org/genai"
@@ -16,6 +17,9 @@ type VertexProvider struct {
 	temperature float32
 	maxTokens   int
 	timeout     time.Duration
+	client      *genai.Client
+	clientOnce  sync.Once
+	clientErr   error
 }
 
 func NewVertexProvider(cfg ProviderConfig) *VertexProvider {
@@ -37,17 +41,24 @@ func (p *VertexProvider) Name() string {
 	return "vertex"
 }
 
+func (p *VertexProvider) getClient(ctx context.Context) (*genai.Client, error) {
+	p.clientOnce.Do(func() {
+		p.client, p.clientErr = genai.NewClient(ctx, &genai.ClientConfig{
+			Project:  p.project,
+			Location: p.region,
+			Backend:  genai.BackendVertexAI,
+		})
+	})
+	return p.client, p.clientErr
+}
+
 func (p *VertexProvider) Complete(ctx context.Context, req CompletionRequest) (*CompletionResponse, error) {
 	start := time.Now()
 
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 
-	client, err := genai.NewClient(ctx, &genai.ClientConfig{
-		Project:  p.project,
-		Location: p.region,
-		Backend:  genai.BackendVertexAI,
-	})
+	client, err := p.getClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("vertex: create client: %w", err)
 	}

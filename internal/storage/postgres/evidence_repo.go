@@ -10,11 +10,19 @@ import (
 )
 
 type EvidenceRepo struct {
-	db *DB
+	q Querier
 }
 
 func NewEvidenceRepo(db *DB) *EvidenceRepo {
-	return &EvidenceRepo{db: db}
+	return &EvidenceRepo{q: db.pool}
+}
+
+func (r *EvidenceRepo) WithTx(tx pgx.Tx) *EvidenceRepo {
+	return &EvidenceRepo{q: tx}
+}
+
+func NewEvidenceRepoTx(tx pgx.Tx) *EvidenceRepo {
+	return &EvidenceRepo{q: tx}
 }
 
 func (r *EvidenceRepo) CreateBatch(ctx context.Context, evidence []contracts.Evidence) error {
@@ -40,7 +48,7 @@ func (r *EvidenceRepo) CreateBatch(ctx context.Context, evidence []contracts.Evi
 		)
 	}
 
-	br := r.db.pool.SendBatch(ctx, batch)
+	br := r.q.SendBatch(ctx, batch)
 	defer br.Close()
 	for range evidence {
 		if _, err := br.Exec(); err != nil {
@@ -51,7 +59,7 @@ func (r *EvidenceRepo) CreateBatch(ctx context.Context, evidence []contracts.Evi
 }
 
 func (r *EvidenceRepo) ListByInvestigation(ctx context.Context, investigationID string) ([]contracts.Evidence, error) {
-	rows, err := r.db.pool.Query(ctx, `
+	rows, err := r.q.Query(ctx, `
 		SELECT id, investigation_id, kind, source, target,
 		       collected_at, observed_at_from, observed_at_to,
 		       summary, body_ref, query, score, attributes, redaction_state
