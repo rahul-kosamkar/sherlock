@@ -15,16 +15,15 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgx/v5"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rahulkosamkar/sherlock/api"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"github.com/rahulkosamkar/sherlock/internal/audit"
 	"github.com/rahulkosamkar/sherlock/internal/collector"
 	deploycollector "github.com/rahulkosamkar/sherlock/internal/collector/deploy"
 	k8scollector "github.com/rahulkosamkar/sherlock/internal/collector/kubernetes"
 	lokicollector "github.com/rahulkosamkar/sherlock/internal/collector/loki"
 	promcollector "github.com/rahulkosamkar/sherlock/internal/collector/prometheus"
-	"github.com/jackc/pgx/v5"
 	"github.com/rahulkosamkar/sherlock/internal/config"
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 	"github.com/rahulkosamkar/sherlock/internal/correlation"
@@ -48,6 +47,7 @@ import (
 	"github.com/rahulkosamkar/sherlock/internal/timeline"
 	"github.com/rahulkosamkar/sherlock/internal/tracing"
 	"github.com/rahulkosamkar/sherlock/migrations"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 )
@@ -526,20 +526,28 @@ func (a *pgxTxAdapter) Rollback(ctx context.Context) error { return a.tx.Rollbac
 
 type txRepoFactoryAdapter struct{}
 
+func extractPgxTx(tx investigation.Tx) pgx.Tx {
+	adapter, ok := tx.(*pgxTxAdapter)
+	if !ok {
+		panic("txRepoFactoryAdapter: unexpected Tx type")
+	}
+	return adapter.tx
+}
+
 func (a *txRepoFactoryAdapter) InvestigationRepoTx(tx investigation.Tx) investigation.InvestigationStore {
-	return postgres.NewInvestigationRepoTx(tx.(*pgxTxAdapter).tx)
+	return postgres.NewInvestigationRepoTx(extractPgxTx(tx))
 }
 
 func (a *txRepoFactoryAdapter) EvidenceRepoTx(tx investigation.Tx) investigation.EvidenceStore {
-	return postgres.NewEvidenceRepoTx(tx.(*pgxTxAdapter).tx)
+	return postgres.NewEvidenceRepoTx(extractPgxTx(tx))
 }
 
 func (a *txRepoFactoryAdapter) TimelineRepoTx(tx investigation.Tx) investigation.TimelineStore {
-	return postgres.NewTimelineRepoTx(tx.(*pgxTxAdapter).tx)
+	return postgres.NewTimelineRepoTx(extractPgxTx(tx))
 }
 
 func (a *txRepoFactoryAdapter) HypothesisRepoTx(tx investigation.Tx) investigation.HypothesisStore {
-	return postgres.NewHypothesisRepoTx(tx.(*pgxTxAdapter).tx)
+	return postgres.NewHypothesisRepoTx(extractPgxTx(tx))
 }
 
 func newMigrator(dsn string) (*migrate.Migrate, error) {

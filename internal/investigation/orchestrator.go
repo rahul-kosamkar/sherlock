@@ -527,7 +527,7 @@ func (o *Orchestrator) failInvestigation(ctx context.Context, inv *contracts.Inv
 	return fmt.Errorf("investigation failed: %s", errMsg)
 }
 
-func (o *Orchestrator) storeEvidenceBatch(ctx context.Context, investigationID string, collected []contracts.Evidence) error {
+func (o *Orchestrator) storeEvidenceBatch(ctx context.Context, _ string, collected []contracts.Evidence) error {
 	if len(collected) == 0 {
 		return nil
 	}

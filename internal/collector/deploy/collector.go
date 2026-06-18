@@ -335,7 +335,7 @@ func (c *Collector) fetchDeploymentStatus(ctx context.Context, statusesURL strin
 	return statuses[0].State
 }
 
-func (c *Collector) doWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
+func (c *Collector) doWithRetry(_ context.Context, req *http.Request) (*http.Response, error) {
 	const maxRetries = 3
 	var lastErr error
 	for attempt := 0; attempt <= maxRetries; attempt++ {

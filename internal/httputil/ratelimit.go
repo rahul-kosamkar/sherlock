@@ -38,8 +38,8 @@ func (l *IPRateLimiter) StartCleanup() {
 			case <-ticker.C:
 				cutoff := time.Now().Add(-10 * time.Minute)
 				l.limiters.Range(func(key, value any) bool {
-					entry := value.(*ipEntry)
-					if entry.lastAccess.Before(cutoff) {
+					entry, _ := value.(*ipEntry)
+					if entry != nil && entry.lastAccess.Before(cutoff) {
 						l.limiters.Delete(key)
 					}
 					return true
@@ -58,7 +58,7 @@ func (l *IPRateLimiter) Stop() {
 func (l *IPRateLimiter) getLimiter(ip string) *rate.Limiter {
 	now := time.Now()
 	if v, ok := l.limiters.Load(ip); ok {
-		entry := v.(*ipEntry)
+		entry, _ := v.(*ipEntry)
 		entry.lastAccess = now
 		return entry.limiter
 	}

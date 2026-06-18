@@ -151,7 +151,7 @@ func (f *FollowUpExecutor) executeGitHubFiles(ctx context.Context, fu FollowUpQu
 
 	paths := parseCSV(fu.Value)
 
-	var safePaths []string
+	safePaths := make([]string, 0, len(paths))
 	for _, p := range paths {
 		p = strings.TrimSpace(p)
 		if p == "" || strings.Contains(p, "..") || strings.HasPrefix(p, "/") {
