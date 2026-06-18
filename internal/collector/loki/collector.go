@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	sourceName    = "loki"
-	queryLimit    = 500
-	scoreFatal    = 0.9
-	scoreError    = 0.7
-	scoreWarning  = 0.4
-	scoreDefault  = 0.3
+	sourceName   = "loki"
+	queryLimit   = 500
+	scoreFatal   = 0.9
+	scoreError   = 0.7
+	scoreWarning = 0.4
+	scoreDefault = 0.3
 )
 
 type Collector struct {

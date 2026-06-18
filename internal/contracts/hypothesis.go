@@ -15,13 +15,13 @@ const (
 // Hypothesis represents a ranked explanation for an incident,
 // always backed by evidence IDs.
 type Hypothesis struct {
-	ID            string        `json:"id"`
-	Title         string        `json:"title"`
-	Narrative     string        `json:"narrative"`
-	CauseCategory CauseCategory `json:"cause_category"`
-	Confidence    float64       `json:"confidence"`
-	Supporting    []string      `json:"supporting"`    // Evidence IDs
-	Contradicting []string      `json:"contradicting"` // Evidence IDs
+	ID             string         `json:"id"`
+	Title          string         `json:"title"`
+	Narrative      string         `json:"narrative"`
+	CauseCategory  CauseCategory  `json:"cause_category"`
+	Confidence     float64        `json:"confidence"`
+	Supporting     []string       `json:"supporting"`    // Evidence IDs
+	Contradicting  []string       `json:"contradicting"` // Evidence IDs
 	SuggestedFixes []SuggestedFix `json:"suggested_fixes"`
 }
 

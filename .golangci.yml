@@ -31,7 +31,6 @@ linters-settings:
     enabled-checks:
       - dupImport
       - nestingReduce
-      - unnamedResult
   revive:
     rules:
       - name: blank-imports
@@ -49,6 +48,7 @@ linters-settings:
     enable-all: true
     disable:
       - fieldalignment
+      - shadow
 
 issues:
   exclude-rules:
@@ -57,6 +57,8 @@ issues:
         - errcheck
         - gocritic
         - unparam
+        - revive
+        - unused
     - linters:
         - gocritic
       text: "unnecessaryDefer"

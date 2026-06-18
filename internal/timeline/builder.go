@@ -73,6 +73,7 @@ func (b *Builder) Build(data contracts.InvestigationData) []contracts.TimelineEv
 				EvidenceIDs: []string{e.ID},
 				Attributes:  e.Attributes,
 			}
+		default:
 		}
 
 		if ev != nil {

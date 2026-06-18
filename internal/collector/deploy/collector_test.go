@@ -37,7 +37,6 @@ func TestCollect_ResolvesRepoFromWorkloadMap(t *testing.T) {
 	}
 
 	req := contracts.CollectRequest{
-		InvestigationID: "inv-1",
 		Targets: []contracts.TargetRef{
 			{Kind: "service", Name: "payments-api"},
 		},
@@ -59,7 +58,6 @@ func TestCollect_NoMatchingRepo_ReturnsEmpty(t *testing.T) {
 	}
 
 	req := contracts.CollectRequest{
-		InvestigationID: "inv-1",
 		Targets: []contracts.TargetRef{
 			{Kind: "service", Name: "unknown-service"},
 		},
@@ -88,7 +86,9 @@ func TestCollect_GitHubDeployments(t *testing.T) {
 			Environment: "production",
 			Description: "Deploy v1.2.3",
 			CreatedAt:   deployTime,
-			Creator:     struct{ Login string `json:"login"` }{Login: "deployer"},
+			Creator: struct {
+				Login string `json:"login"`
+			}{Login: "deployer"},
 			StatusesURL: "", // skip status fetch
 		},
 	}
@@ -155,7 +155,9 @@ func TestCollect_GitHubDeploymentsAPI_Mock(t *testing.T) {
 				Environment: "production",
 				Description: "Deploy v1.2.3",
 				CreatedAt:   deployTime,
-				Creator:     struct{ Login string `json:"login"` }{Login: "deployer"},
+				Creator: struct {
+					Login string `json:"login"`
+				}{Login: "deployer"},
 			},
 		}
 		json.NewEncoder(w).Encode(deployments)

@@ -367,7 +367,7 @@ func TestLLMEngine_HighConfidence_SkipsPass3(t *testing.T) {
 	provider := &mockLLMProvider{
 		nameVal: "test-provider",
 		responses: []*llm.CompletionResponse{
-			{Content: llmResponseWithFollowUp},              // pass 1: medium confidence + follow-ups
+			{Content: llmResponseWithFollowUp},               // pass 1: medium confidence + follow-ups
 			{Content: llmResponsePass2HighConfWithFollowUps}, // pass 2: high confidence + follow-ups
 			{Content: llmResponseNoFollowUp},                 // pass 3: should not be reached
 		},

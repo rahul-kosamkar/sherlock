@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,7 +24,6 @@ import (
 	lokicollector "github.com/rahulkosamkar/sherlock/internal/collector/loki"
 	promcollector "github.com/rahulkosamkar/sherlock/internal/collector/prometheus"
 	"github.com/rahulkosamkar/sherlock/internal/config"
-	"github.com/rahulkosamkar/sherlock/internal/tracing"
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
 	"github.com/rahulkosamkar/sherlock/internal/correlation"
 	"github.com/rahulkosamkar/sherlock/internal/dedup"
@@ -36,14 +36,15 @@ import (
 	"github.com/rahulkosamkar/sherlock/internal/rca"
 	"github.com/rahulkosamkar/sherlock/internal/receiver"
 	"github.com/rahulkosamkar/sherlock/internal/receiver/alertmanager"
-	"github.com/rahulkosamkar/sherlock/internal/remediation"
 	githubreceiver "github.com/rahulkosamkar/sherlock/internal/receiver/github"
 	gitlabreceiver "github.com/rahulkosamkar/sherlock/internal/receiver/gitlab"
 	"github.com/rahulkosamkar/sherlock/internal/receiver/grafana"
+	"github.com/rahulkosamkar/sherlock/internal/remediation"
 	sherlockslack "github.com/rahulkosamkar/sherlock/internal/slack"
 	"github.com/rahulkosamkar/sherlock/internal/storage/objectstore"
 	"github.com/rahulkosamkar/sherlock/internal/storage/postgres"
 	"github.com/rahulkosamkar/sherlock/internal/timeline"
+	"github.com/rahulkosamkar/sherlock/internal/tracing"
 	"github.com/rahulkosamkar/sherlock/migrations"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
@@ -86,12 +87,12 @@ func main() {
 
 		switch direction {
 		case "up":
-			if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+			if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 				logger.Fatal("migrate up failed", zap.Error(err))
 			}
 			logger.Info("migrations applied successfully")
 		case "down":
-			if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+			if err := m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 				logger.Fatal("migrate down failed", zap.Error(err))
 			}
 			logger.Info("migrations rolled back successfully")
@@ -136,7 +137,7 @@ func run(logger *zap.Logger) error {
 	if tracingErr != nil {
 		logger.Warn("failed to init tracing", zap.Error(tracingErr))
 	} else {
-		defer tracingShutdown(context.Background())
+		defer func() { _ = tracingShutdown(context.Background()) }()
 	}
 
 	logger.Info("starting sherlock",
@@ -152,7 +153,7 @@ func run(logger *zap.Logger) error {
 		if mErr != nil {
 			return fmt.Errorf("auto-migrate create migrator: %w", mErr)
 		}
-		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			return fmt.Errorf("auto-migrate up: %w", err)
 		}
 		logger.Info("auto-migrate complete")
@@ -419,7 +420,7 @@ func run(logger *zap.Logger) error {
 	defer shutdownCancel()
 
 	if slackApp != nil {
-		slackApp.Stop()
+		_ = slackApp.Stop()
 	}
 	orch.Stop()
 	cancel()
@@ -446,7 +447,7 @@ func (a *entityResolverAdapter) Resolve(alert *contracts.NormalizedAlert) invest
 }
 
 type slackEnqueuer struct {
-	publisher investigation.QueuePublisher
+	publisher  investigation.QueuePublisher
 	streamName string
 }
 

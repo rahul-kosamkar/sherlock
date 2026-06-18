@@ -46,12 +46,12 @@ type deploymentEvent struct {
 }
 
 type deploymentState struct {
-	ID            int64      `json:"id"`
-	State         string     `json:"state"`
-	Description   string     `json:"description"`
-	TargetURL     string     `json:"target_url"`
-	EnvironmentURL string    `json:"environment_url"`
-	Deployment    deployment `json:"deployment"`
+	ID             int64      `json:"id"`
+	State          string     `json:"state"`
+	Description    string     `json:"description"`
+	TargetURL      string     `json:"target_url"`
+	EnvironmentURL string     `json:"environment_url"`
+	Deployment     deployment `json:"deployment"`
 }
 
 type deploymentStatusEvent struct {
@@ -150,14 +150,14 @@ func (r *Receiver) decodeDeployment(body []byte) ([]contracts.NormalizedAlert, e
 	}
 
 	na := contracts.NormalizedAlert{
-		ID:       uuid.NewString(),
-		Source:   "github",
-		Status:   contracts.AlertStatusFiring,
-		Severity: contracts.SeverityInfo,
-		Title:    fmt.Sprintf("Deployment to %s — %s", env, repo),
-		Summary:  summary,
+		ID:          uuid.NewString(),
+		Source:      "github",
+		Status:      contracts.AlertStatusFiring,
+		Severity:    contracts.SeverityInfo,
+		Title:       fmt.Sprintf("Deployment to %s — %s", env, repo),
+		Summary:     summary,
 		Fingerprint: fingerprint(repo, env, sha),
-		StartsAt: time.Now().UTC(),
+		StartsAt:    time.Now().UTC(),
 		Labels: map[string]string{
 			"repo":        repo,
 			"environment": env,
@@ -196,14 +196,14 @@ func (r *Receiver) decodeDeploymentStatus(body []byte) ([]contracts.NormalizedAl
 	sha := d.SHA
 
 	na := contracts.NormalizedAlert{
-		ID:       uuid.NewString(),
-		Source:   "github",
-		Status:   contracts.AlertStatusFiring,
-		Severity: contracts.SeverityWarning,
-		Title:    fmt.Sprintf("Deployment %s — %s/%s", state, repo, env),
-		Summary:  ev.DeploymentStatus.Description,
+		ID:          uuid.NewString(),
+		Source:      "github",
+		Status:      contracts.AlertStatusFiring,
+		Severity:    contracts.SeverityWarning,
+		Title:       fmt.Sprintf("Deployment %s — %s/%s", state, repo, env),
+		Summary:     ev.DeploymentStatus.Description,
 		Fingerprint: fingerprint(repo, env, sha),
-		StartsAt: time.Now().UTC(),
+		StartsAt:    time.Now().UTC(),
 		Labels: map[string]string{
 			"repo":        repo,
 			"environment": env,
@@ -256,15 +256,15 @@ func (r *Receiver) decodePush(body []byte) ([]contracts.NormalizedAlert, error) 
 	}
 
 	na := contracts.NormalizedAlert{
-		ID:       uuid.NewString(),
-		Source:   "github",
-		Status:   contracts.AlertStatusFiring,
-		Severity: contracts.SeverityInfo,
-		Title:    fmt.Sprintf("Push to %s — %s", ref, repo),
-		Summary:  summary,
+		ID:          uuid.NewString(),
+		Source:      "github",
+		Status:      contracts.AlertStatusFiring,
+		Severity:    contracts.SeverityInfo,
+		Title:       fmt.Sprintf("Push to %s — %s", ref, repo),
+		Summary:     summary,
 		Fingerprint: fingerprint(repo, ref, ev.After),
-		StartsAt: time.Now().UTC(),
-		Labels:  labels,
+		StartsAt:    time.Now().UTC(),
+		Labels:      labels,
 		EntityHints: []contracts.TargetRef{
 			{
 				Kind: "repo",

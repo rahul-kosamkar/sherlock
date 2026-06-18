@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	temporalWindow     = 5 * time.Minute
-	minCorrelationStr  = 0.3
-	labelStrength      = 0.8
-	topologyStrength   = 0.5
+	temporalWindow    = 5 * time.Minute
+	minCorrelationStr = 0.3
+	labelStrength     = 0.8
+	topologyStrength  = 0.5
 )
 
 var _ contracts.Correlator = (*Engine)(nil)

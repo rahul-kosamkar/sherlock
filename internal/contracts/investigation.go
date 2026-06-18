@@ -8,12 +8,12 @@ import (
 type InvestigationStatus string
 
 const (
-	StatusPending      InvestigationStatus = "pending"
-	StatusCollecting   InvestigationStatus = "collecting"
-	StatusAnalyzing    InvestigationStatus = "analyzing"
-	StatusPublishing   InvestigationStatus = "publishing"
-	StatusDone         InvestigationStatus = "done"
-	StatusFailed       InvestigationStatus = "failed"
+	StatusPending    InvestigationStatus = "pending"
+	StatusCollecting InvestigationStatus = "collecting"
+	StatusAnalyzing  InvestigationStatus = "analyzing"
+	StatusPublishing InvestigationStatus = "publishing"
+	StatusDone       InvestigationStatus = "done"
+	StatusFailed     InvestigationStatus = "failed"
 )
 
 // Investigation is the top-level work item that tracks the
@@ -52,20 +52,20 @@ type InvestigationResult struct {
 	TimelineEventIDs   []string            `json:"timeline_event_ids"`
 	RecommendedActions []SuggestedFix      `json:"recommended_actions"`
 
-	RCAEngine    string `json:"rca_engine,omitempty"`
-	AIProvider   string `json:"ai_provider,omitempty"`
-	AIModel      string `json:"ai_model,omitempty"`
-	PassCount    int    `json:"pass_count,omitempty"`
-	RootCause    string `json:"root_cause,omitempty"`
-	Severity     string `json:"severity,omitempty"`
-	BugFixable   bool   `json:"bug_fixable,omitempty"`
+	RCAEngine  string `json:"rca_engine,omitempty"`
+	AIProvider string `json:"ai_provider,omitempty"`
+	AIModel    string `json:"ai_model,omitempty"`
+	PassCount  int    `json:"pass_count,omitempty"`
+	RootCause  string `json:"root_cause,omitempty"`
+	Severity   string `json:"severity,omitempty"`
+	BugFixable bool   `json:"bug_fixable,omitempty"`
 }
 
 // InvestigationData bundles all collected evidence for analysis.
 type InvestigationData struct {
-	Investigation Investigation `json:"investigation"`
+	Investigation Investigation     `json:"investigation"`
 	Alerts        []NormalizedAlert `json:"alerts"`
-	Evidence      []Evidence       `json:"evidence"`
+	Evidence      []Evidence        `json:"evidence"`
 }
 
 // InvestigationGraph is an enriched view of the investigation

@@ -182,9 +182,9 @@ func (o *Orchestrator) SetRemediation(r RemediationEvaluator) {
 
 type investigationJob struct {
 	Alert          contracts.NormalizedAlert `json:"alert"`
-	SlackChannelID string                   `json:"slack_channel_id,omitempty"`
-	SlackThreadTS  string                   `json:"slack_thread_ts,omitempty"`
-	RequestedBy    string                   `json:"requested_by,omitempty"`
+	SlackChannelID string                    `json:"slack_channel_id,omitempty"`
+	SlackThreadTS  string                    `json:"slack_thread_ts,omitempty"`
+	RequestedBy    string                    `json:"requested_by,omitempty"`
 }
 
 func (o *Orchestrator) Start(ctx context.Context, streamName string) error {

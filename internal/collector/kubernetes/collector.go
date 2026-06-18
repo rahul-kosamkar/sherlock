@@ -166,10 +166,10 @@ func (c *Collector) podStateEvidence(req contracts.CollectRequest, target contra
 			Summary:         fmt.Sprintf("[pod/%s] %s", pod.Name, summary),
 			Score:           score,
 			Attributes: map[string]string{
-				"pod":            pod.Name,
-				"container":      cs.Name,
-				"restart_count":  fmt.Sprintf("%d", cs.RestartCount),
-				"phase":          string(pod.Status.Phase),
+				"pod":           pod.Name,
+				"container":     cs.Name,
+				"restart_count": fmt.Sprintf("%d", cs.RestartCount),
+				"phase":         string(pod.Status.Phase),
 			},
 			RedactionState: contracts.RedactionNone,
 		})
@@ -256,10 +256,10 @@ func (c *Collector) eventEvidence(req contracts.CollectRequest, target contracts
 			Summary:         fmt.Sprintf("[%s] %s: %s (x%d)", ev.InvolvedObject.Name, ev.Reason, ev.Message, ev.Count),
 			Score:           score,
 			Attributes: map[string]string{
-				"reason":  ev.Reason,
-				"type":    ev.Type,
-				"object":  ev.InvolvedObject.Kind + "/" + ev.InvolvedObject.Name,
-				"count":   fmt.Sprintf("%d", ev.Count),
+				"reason": ev.Reason,
+				"type":   ev.Type,
+				"object": ev.InvolvedObject.Kind + "/" + ev.InvolvedObject.Name,
+				"count":  fmt.Sprintf("%d", ev.Count),
 			},
 			RedactionState: contracts.RedactionNone,
 		})
@@ -288,4 +288,3 @@ func buildLabelSelector(target contracts.TargetRef) string {
 		return "app=" + target.Name
 	}
 }
-

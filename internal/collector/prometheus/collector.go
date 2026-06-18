@@ -15,12 +15,12 @@ import (
 )
 
 const (
-	sourceName     = "prometheus"
-	queryStep      = time.Minute
-	anomalyFactor  = 2.0
-	scoreAnomaly   = 0.8
-	scoreElevated  = 0.5
-	scoreNormal    = 0.2
+	sourceName    = "prometheus"
+	queryStep     = time.Minute
+	anomalyFactor = 2.0
+	scoreAnomaly  = 0.8
+	scoreElevated = 0.5
+	scoreNormal   = 0.2
 )
 
 type Collector struct {

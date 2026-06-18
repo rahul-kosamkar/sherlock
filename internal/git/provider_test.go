@@ -11,29 +11,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func newTestProvider(url, token, org string, repos map[string]string, branch string, maxFileSize, maxFiles int) *GitHubProvider {
-	p := NewGitHubProvider(Config{
-		Token:         token,
-		Organization:  org,
-		WorkloadRepos: repos,
-		DefaultBranch: branch,
-		MaxFileSize:   maxFileSize,
-		MaxFiles:      maxFiles,
-	}, zap.NewNop())
-	if url != "" {
-		p.httpClient = &http.Client{}
-		p.org = ""
-		p.defaultBranch = branch
-		if branch == "" {
-			p.defaultBranch = "main"
-		}
-		// Override the fetchFile URL by replacing org with the test server URL pattern
-		// We'll set org to the full base so URL construction works with httptest
-		p.org = url
-	}
-	return p
-}
-
 func TestGitHubProvider_Name(t *testing.T) {
 	p := NewGitHubProvider(Config{}, zap.NewNop())
 	if got := p.Name(); got != "github" {

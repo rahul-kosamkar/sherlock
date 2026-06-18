@@ -159,9 +159,9 @@ func TestDecode_DeploymentEvent(t *testing.T) {
 
 func TestDecode_PushEvent(t *testing.T) {
 	payload := pushEvent{
-		Ref:    "refs/heads/main",
-		Before: "0000000000000000000000000000000000000000",
-		After:  "abc123def456789",
+		Ref:     "refs/heads/main",
+		Before:  "0000000000000000000000000000000000000000",
+		After:   "abc123def456789",
 		Compare: "https://github.com/org/repo/compare/000000...abc123",
 		HeadCommit: &commit{
 			ID:      "abc123def456789",

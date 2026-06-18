@@ -27,36 +27,6 @@ func (m *mockEnqueuer) EnqueueInvestigation(_ context.Context, channelID, thread
 	return m.invID, m.err
 }
 
-type mockPublisher struct {
-	startedChannel string
-	startedInvID   string
-	startedTS      string
-	evidenceMsg    string
-	errorMsg       string
-	err            error
-}
-
-func (m *mockPublisher) PostInvestigationStarted(_ context.Context, channelID string, investigationID string) (string, error) {
-	m.startedChannel = channelID
-	m.startedInvID = investigationID
-	m.startedTS = "thread-ts-mock"
-	return m.startedTS, m.err
-}
-
-func (m *mockPublisher) PostEvidenceUpdate(_ context.Context, _, _ string, msg string) error {
-	m.evidenceMsg = msg
-	return nil
-}
-
-func (m *mockPublisher) PostResult(_ context.Context, _, _ string, _ interface{}) error {
-	return nil
-}
-
-func (m *mockPublisher) PostError(_ context.Context, _, _ string, errMsg string) error {
-	m.errorMsg = errMsg
-	return nil
-}
-
 type mockEvidenceQuerier struct {
 	evidence []contracts.Evidence
 	err      error
@@ -82,14 +52,6 @@ type mockInvestigationQuerier struct {
 
 func (m *mockInvestigationQuerier) GetByID(_ context.Context, _ string) (*contracts.Investigation, error) {
 	return m.inv, m.err
-}
-
-func newTestApp(enq *mockEnqueuer, pub *mockPublisher) *App {
-	return &App{
-		enqueuer:  enq,
-		publisher: &Publisher{logger: zap.NewNop()},
-		logger:    zap.NewNop(),
-	}
 }
 
 func TestNewApp_SocketMode(t *testing.T) {

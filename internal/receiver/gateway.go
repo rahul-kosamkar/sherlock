@@ -64,9 +64,9 @@ type Gateway struct {
 
 type investigationJob struct {
 	Alert          contracts.NormalizedAlert `json:"alert"`
-	SlackChannelID string                   `json:"slack_channel_id,omitempty"`
-	SlackThreadTS  string                   `json:"slack_thread_ts,omitempty"`
-	RequestedBy    string                   `json:"requested_by,omitempty"`
+	SlackChannelID string                    `json:"slack_channel_id,omitempty"`
+	SlackThreadTS  string                    `json:"slack_thread_ts,omitempty"`
+	RequestedBy    string                    `json:"requested_by,omitempty"`
 }
 
 func NewGateway(publisher Publisher, blobStore BlobStore, logger *zap.Logger) *Gateway {
@@ -185,12 +185,12 @@ func (g *Gateway) handleWebhook(w http.ResponseWriter, r *http.Request) {
 				)
 				span.RecordError(err)
 			} else if result != nil && result.IsDuplicate {
-			g.logger.Info("duplicate alert detected, skipping investigation",
-				zap.String("alert_id", alerts[i].ID),
-				zap.String("fingerprint", alerts[i].Fingerprint),
-				zap.String("existing_investigation", result.ExistingID),
-			)
-			metrics.DedupHits.Inc()
+				g.logger.Info("duplicate alert detected, skipping investigation",
+					zap.String("alert_id", alerts[i].ID),
+					zap.String("fingerprint", alerts[i].Fingerprint),
+					zap.String("existing_investigation", result.ExistingID),
+				)
+				metrics.DedupHits.Inc()
 				if g.dedupNotifier != nil && result.ExistingChannel != "" {
 					alertValue := alerts[i].Title
 					if alertValue == "" {
@@ -212,12 +212,12 @@ func (g *Gateway) handleWebhook(w http.ResponseWriter, r *http.Request) {
 					zap.String("alert_id", alerts[i].ID),
 					zap.Error(err),
 				)
-		} else if suppressed {
-			g.logger.Info("alert suppressed, skipping investigation",
-				zap.String("alert_id", alerts[i].ID),
-				zap.String("fingerprint", alerts[i].Fingerprint),
-			)
-			metrics.SuppressHits.Inc()
+			} else if suppressed {
+				g.logger.Info("alert suppressed, skipping investigation",
+					zap.String("alert_id", alerts[i].ID),
+					zap.String("fingerprint", alerts[i].Fingerprint),
+				)
+				metrics.SuppressHits.Inc()
 				dedupCount++
 				continue
 			}

@@ -25,9 +25,9 @@ func (m *mockPublisher) Publish(_ context.Context, subject string, data []byte) 
 
 type testJob struct {
 	Alert          contracts.NormalizedAlert `json:"alert"`
-	SlackChannelID string                   `json:"slack_channel_id,omitempty"`
-	SlackThreadTS  string                   `json:"slack_thread_ts,omitempty"`
-	RequestedBy    string                   `json:"requested_by,omitempty"`
+	SlackChannelID string                    `json:"slack_channel_id,omitempty"`
+	SlackThreadTS  string                    `json:"slack_thread_ts,omitempty"`
+	RequestedBy    string                    `json:"requested_by,omitempty"`
 }
 
 func TestParseLabelsFromText_WithText(t *testing.T) {

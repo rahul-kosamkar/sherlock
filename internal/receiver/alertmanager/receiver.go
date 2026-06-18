@@ -70,11 +70,11 @@ func (r *Receiver) Decode(_ context.Context, _ http.Header, body []byte) ([]cont
 			Summary:     a.Annotations["description"],
 			Fingerprint: a.Fingerprint,
 			GroupKey:    p.GroupKey,
-			StartsAt:   a.StartsAt,
-			Labels:     a.Labels,
+			StartsAt:    a.StartsAt,
+			Labels:      a.Labels,
 			Annotations: a.Annotations,
 			EntityHints: extractEntityHints(a.Labels, p.CommonLabels),
-			Links:      buildLinks(a),
+			Links:       buildLinks(a),
 		}
 
 		if !a.EndsAt.IsZero() && a.EndsAt.Year() > 1 {

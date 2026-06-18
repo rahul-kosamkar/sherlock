@@ -47,7 +47,7 @@ func NewHTTPTransport(address string, signingSecret string, handler Handler, log
 	return t
 }
 
-func (t *HTTPTransport) Start(ctx context.Context) error {
+func (t *HTTPTransport) Start(_ context.Context) error {
 	t.logger.Info("starting HTTP transport", zap.String("address", t.server.Addr))
 	errCh := make(chan error, 1)
 	go func() {
@@ -267,7 +267,7 @@ func (t *HTTPTransport) handleEvent(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (t *HTTPTransport) handleOAuthCallback(w http.ResponseWriter, r *http.Request) {
+func (t *HTTPTransport) handleOAuthCallback(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, "OAuth callback received. Not yet implemented.")
 }

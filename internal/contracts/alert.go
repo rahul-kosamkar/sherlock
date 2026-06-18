@@ -33,13 +33,13 @@ type NormalizedAlert struct {
 	Summary     string            `json:"summary"`
 	Fingerprint string            `json:"fingerprint"`
 	GroupKey    string            `json:"group_key"`
-	StartsAt   time.Time         `json:"starts_at"`
-	EndsAt     *time.Time        `json:"ends_at,omitempty"`
-	Labels     map[string]string `json:"labels"`
+	StartsAt    time.Time         `json:"starts_at"`
+	EndsAt      *time.Time        `json:"ends_at,omitempty"`
+	Labels      map[string]string `json:"labels"`
 	Annotations map[string]string `json:"annotations"`
 	EntityHints []TargetRef       `json:"entity_hints"`
-	Links      []Link            `json:"links"`
-	RawRef     string            `json:"raw_ref"`
+	Links       []Link            `json:"links"`
+	RawRef      string            `json:"raw_ref"`
 }
 
 type TargetRef struct {

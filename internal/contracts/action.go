@@ -27,12 +27,12 @@ type ActionPlan struct {
 
 // ActionResult records what happened when an action was executed.
 type ActionResult struct {
-	RequestID   string    `json:"request_id"`
-	Success     bool      `json:"success"`
-	Output      string    `json:"output"`
-	ExecutedAt  time.Time `json:"executed_at"`
-	ExecutedBy  string    `json:"executed_by"`
-	ApprovedBy  string    `json:"approved_by"`
+	RequestID  string    `json:"request_id"`
+	Success    bool      `json:"success"`
+	Output     string    `json:"output"`
+	ExecutedAt time.Time `json:"executed_at"`
+	ExecutedBy string    `json:"executed_by"`
+	ApprovedBy string    `json:"approved_by"`
 }
 
 // Remediator executes remediation actions with dry-run support.

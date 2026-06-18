@@ -65,7 +65,7 @@ func (p *Publisher) PostResult(ctx context.Context, channelID, threadTS string, 
 	return nil
 }
 
-func (p *Publisher) NotifyPassStarted(ctx context.Context, channelID, threadTS string, passNum int, message string) error {
+func (p *Publisher) NotifyPassStarted(ctx context.Context, channelID, threadTS string, _ int, message string) error {
 	_, _, err := p.slackClient.PostMessageContext(ctx, channelID,
 		slack.MsgOptionText(message, false),
 		slack.MsgOptionTS(threadTS),

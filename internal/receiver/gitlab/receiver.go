@@ -19,9 +19,9 @@ import (
 // --- GitLab webhook payload types ---
 
 type project struct {
-	Name                string `json:"name"`
-	PathWithNamespace   string `json:"path_with_namespace"`
-	WebURL              string `json:"web_url"`
+	Name              string `json:"name"`
+	PathWithNamespace string `json:"path_with_namespace"`
+	WebURL            string `json:"web_url"`
 }
 
 type commit struct {
@@ -35,27 +35,27 @@ type commit struct {
 }
 
 type deploymentHookEvent struct {
-	ObjectKind     string  `json:"object_kind"`
-	Status         string  `json:"status"`
-	DeployableID   int64   `json:"deployable_id"`
-	Environment    string  `json:"environment"`
-	ShortSHA       string  `json:"short_sha"`
-	CommitURL      string  `json:"commit_url"`
-	CommitTitle    string  `json:"commit_title"`
-	User           string  `json:"user"`
-	UserUsername   string  `json:"user_username"`
-	Project        project `json:"project"`
+	ObjectKind   string  `json:"object_kind"`
+	Status       string  `json:"status"`
+	DeployableID int64   `json:"deployable_id"`
+	Environment  string  `json:"environment"`
+	ShortSHA     string  `json:"short_sha"`
+	CommitURL    string  `json:"commit_url"`
+	CommitTitle  string  `json:"commit_title"`
+	User         string  `json:"user"`
+	UserUsername string  `json:"user_username"`
+	Project      project `json:"project"`
 }
 
 type pushHookEvent struct {
-	ObjectKind string   `json:"object_kind"`
-	Ref        string   `json:"ref"`
-	Before     string   `json:"before"`
-	After      string   `json:"after"`
-	UserName   string   `json:"user_name"`
-	UserUsername string  `json:"user_username"`
-	Commits    []commit `json:"commits"`
-	Project    project  `json:"project"`
+	ObjectKind   string   `json:"object_kind"`
+	Ref          string   `json:"ref"`
+	Before       string   `json:"before"`
+	After        string   `json:"after"`
+	UserName     string   `json:"user_name"`
+	UserUsername string   `json:"user_username"`
+	Commits      []commit `json:"commits"`
+	Project      project  `json:"project"`
 }
 
 // --- Receiver ---
@@ -119,14 +119,14 @@ func (r *Receiver) decodeDeployment(body []byte) ([]contracts.NormalizedAlert, e
 	}
 
 	na := contracts.NormalizedAlert{
-		ID:       uuid.NewString(),
-		Source:   "gitlab",
-		Status:   contracts.AlertStatusFiring,
-		Severity: severity,
-		Title:    fmt.Sprintf("Deployment %s — %s/%s", status, ev.Project.Name, env),
-		Summary:  fmt.Sprintf("Deployment of %s to %s", sha, env),
+		ID:          uuid.NewString(),
+		Source:      "gitlab",
+		Status:      contracts.AlertStatusFiring,
+		Severity:    severity,
+		Title:       fmt.Sprintf("Deployment %s — %s/%s", status, ev.Project.Name, env),
+		Summary:     fmt.Sprintf("Deployment of %s to %s", sha, env),
 		Fingerprint: fingerprint(proj, env, sha),
-		StartsAt: time.Now().UTC(),
+		StartsAt:    time.Now().UTC(),
 		Labels: map[string]string{
 			"project":     proj,
 			"environment": env,
@@ -178,15 +178,15 @@ func (r *Receiver) decodePush(body []byte) ([]contracts.NormalizedAlert, error) 
 	}
 
 	na := contracts.NormalizedAlert{
-		ID:       uuid.NewString(),
-		Source:   "gitlab",
-		Status:   contracts.AlertStatusFiring,
-		Severity: contracts.SeverityInfo,
-		Title:    fmt.Sprintf("Push to %s — %s", ref, ev.Project.Name),
-		Summary:  summary,
+		ID:          uuid.NewString(),
+		Source:      "gitlab",
+		Status:      contracts.AlertStatusFiring,
+		Severity:    contracts.SeverityInfo,
+		Title:       fmt.Sprintf("Push to %s — %s", ref, ev.Project.Name),
+		Summary:     summary,
 		Fingerprint: fingerprint(proj, ref, ev.After),
-		StartsAt: time.Now().UTC(),
-		Labels:  labels,
+		StartsAt:    time.Now().UTC(),
+		Labels:      labels,
 		EntityHints: []contracts.TargetRef{
 			{
 				Kind: "repo",

@@ -535,4 +535,3 @@ func TestBuildLabelSelector_Default(t *testing.T) {
 		t.Fatalf("buildLabelSelector(unknown) = %q, want %q", got, "app=myapp")
 	}
 }
-

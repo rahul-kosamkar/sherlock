@@ -22,12 +22,12 @@ type PassNotifier interface {
 }
 
 type LLMEngine struct {
-	provider     llm.Provider
-	followUp     *llm.FollowUpExecutor
-	fallback     contracts.RCAEngine
-	maxPasses    int
-	logger       *zap.Logger
-	notifier     PassNotifier
+	provider  llm.Provider
+	followUp  *llm.FollowUpExecutor
+	fallback  contracts.RCAEngine
+	maxPasses int
+	logger    *zap.Logger
+	notifier  PassNotifier
 }
 
 func NewLLMEngine(

@@ -29,29 +29,29 @@ const (
 // Evidence represents a single piece of collected evidence with
 // full provenance for auditability.
 type Evidence struct {
-	ID             string            `json:"id"`
-	InvestigationID string           `json:"investigation_id"`
-	Kind           EvidenceKind      `json:"kind"`
-	Source         string            `json:"source"`
-	Target         TargetRef         `json:"target"`
-	CollectedAt    time.Time         `json:"collected_at"`
-	ObservedAtFrom time.Time         `json:"observed_at_from"`
-	ObservedAtTo   time.Time         `json:"observed_at_to"`
-	Summary        string            `json:"summary"`
-	BodyRef        string            `json:"body_ref"`
-	Query          string            `json:"query"`
-	Score          float64           `json:"score"`
-	Attributes     map[string]string `json:"attributes"`
-	RedactionState RedactionState    `json:"redaction_state"`
+	ID              string            `json:"id"`
+	InvestigationID string            `json:"investigation_id"`
+	Kind            EvidenceKind      `json:"kind"`
+	Source          string            `json:"source"`
+	Target          TargetRef         `json:"target"`
+	CollectedAt     time.Time         `json:"collected_at"`
+	ObservedAtFrom  time.Time         `json:"observed_at_from"`
+	ObservedAtTo    time.Time         `json:"observed_at_to"`
+	Summary         string            `json:"summary"`
+	BodyRef         string            `json:"body_ref"`
+	Query           string            `json:"query"`
+	Score           float64           `json:"score"`
+	Attributes      map[string]string `json:"attributes"`
+	RedactionState  RedactionState    `json:"redaction_state"`
 }
 
 // CollectRequest is handed to each collector so it knows what to look for.
 type CollectRequest struct {
-	InvestigationID string      `json:"investigation_id"`
+	InvestigationID string          `json:"investigation_id"`
 	Alert           NormalizedAlert `json:"alert"`
-	Targets         []TargetRef `json:"targets"`
-	TimeFrom        time.Time   `json:"time_from"`
-	TimeTo          time.Time   `json:"time_to"`
+	Targets         []TargetRef     `json:"targets"`
+	TimeFrom        time.Time       `json:"time_from"`
+	TimeTo          time.Time       `json:"time_to"`
 }
 
 // Collector gathers evidence from a specific backend system.
