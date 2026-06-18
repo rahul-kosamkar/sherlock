@@ -30,6 +30,7 @@ When an alert fires, engineers waste time context-switching between dashboards, 
 - **Actionable fix recommendations**: Provides concrete steps to resolve the issue
 - **Confidence scoring**: Each investigation reports HIGH/MEDIUM/LOW confidence with supporting evidence
 - **Provider-agnostic**: Works with OpenAI, Google Vertex AI (Gemini), Anthropic, or local Ollama models
+- **Resilient**: LLM providers are wrapped with automatic retry (exponential backoff) and circuit breaker protection
 
 ## Architecture
 
@@ -77,7 +78,7 @@ Evidence ──► Prompt Builder ──► LLM Provider ──► Response Pars
 | Source | Webhook Path | Verification | Status |
 |--------|-------------|--------------|--------|
 | Grafana Alerting | `/webhooks/grafana` | HMAC-SHA256 | Supported |
-| Prometheus Alertmanager | `/webhooks/alertmanager` | -- | Supported |
+| Prometheus Alertmanager | `/webhooks/alertmanager` | Bearer token (`Authorization: Bearer`) | Supported |
 | GitHub (deploys, pushes) | `/webhooks/github` | HMAC-SHA256 (`X-Hub-Signature-256`) | Supported |
 | GitLab (deploys, pushes) | `/webhooks/gitlab` | Secret token (`X-Gitlab-Token`) | Supported |
 
@@ -220,6 +221,8 @@ Auto-migrate on startup (recommended for development):
 ```bash
 SHERLOCK_AUTO_MIGRATE=true
 ```
+
+Investigation completion (hypotheses, timeline, status update) is performed within a database transaction to ensure atomicity.
 
 ## Enabling LLM-Powered Investigations (Optional)
 
@@ -378,6 +381,8 @@ SHERLOCK_TRACING_ENDPOINT=localhost:4318   # OTLP HTTP endpoint (Jaeger, Tempo, 
 SHERLOCK_TRACING_SAMPLE_RATE=1.0           # 0.0 to 1.0
 ```
 
+All HTTP requests are automatically instrumented via `otelhttp`, and trace context propagates through NATS to investigation workers.
+
 Spans are created for:
 - `webhook.receive` -- alert ingestion with verify, decode, dedup, and publish events
 - `investigation.run` -- full investigation lifecycle
@@ -422,8 +427,11 @@ Requests exceeding the limit receive HTTP 429 (Too Many Requests).
 
 All webhook sources support signature verification:
 - **Grafana**: HMAC-SHA256 via `SHERLOCK_GRAFANA_HMAC_SECRET`
+- **Alertmanager**: Bearer token via `SHERLOCK_ALERTMANAGER_SECRET`
 - **GitHub**: HMAC-SHA256 via `SHERLOCK_GITHUB_WEBHOOK_SECRET`
 - **GitLab**: Secret token via `SHERLOCK_GITLAB_SECRET_TOKEN`
+
+Set `SHERLOCK_STRICT_WEBHOOK_AUTH=true` to prevent Sherlock from starting if any enabled webhook receiver has an empty secret.
 
 ## Building from Source
 
@@ -535,6 +543,7 @@ Sherlock is configured via `config.yaml` with environment variable overrides. Al
 | `SHERLOCK_GRAFANA_HMAC_SECRET` | Grafana webhook HMAC secret | -- |
 | `SHERLOCK_GITHUB_WEBHOOK_SECRET` | GitHub webhook secret | -- |
 | `SHERLOCK_GITLAB_SECRET_TOKEN` | GitLab webhook secret token | -- |
+| `SHERLOCK_ALERTMANAGER_SECRET` | Bearer token for Alertmanager webhook authentication | -- |
 
 ### Deduplication
 
@@ -600,6 +609,8 @@ Sherlock is configured via `config.yaml` with environment variable overrides. Al
 | `SHERLOCK_API_KEY` | API key for `/api/v1/*` endpoints (empty = disabled) | -- |
 | `SHERLOCK_RATE_LIMIT_RPS` | Webhook rate limit (requests/sec/IP) | `50` |
 | `SHERLOCK_RATE_LIMIT_BURST` | Webhook rate limit burst capacity | `100` |
+| `SHERLOCK_ALERTMANAGER_SECRET` | Bearer token for Alertmanager webhook authentication | -- |
+| `SHERLOCK_STRICT_WEBHOOK_AUTH` | Refuse to start if any enabled webhook receiver has an empty secret | `false` |
 
 ## Contributing
 

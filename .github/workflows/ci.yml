@@ -38,6 +38,34 @@ jobs:
       - name: Build
         run: go build -trimpath -o bin/sherlock ./cmd/sherlock
 
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sherlock
+          POSTGRES_PASSWORD: sherlock
+          POSTGRES_DB: sherlock_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U sherlock"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Integration tests
+        run: go test -tags integration -race -count=1 -timeout 10m ./...
+        env:
+          SHERLOCK_TEST_POSTGRES_DSN: postgres://sherlock:sherlock@localhost:5432/sherlock_test?sslmode=disable
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -48,7 +76,32 @@ jobs:
           go-version-file: go.mod
 
       - name: Install golangci-lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v2.1.6
 
       - name: Run golangci-lint
         run: golangci-lint run ./...
+
+  dco:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check DCO sign-off
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+          MISSING=""
+          for SHA in $(git rev-list "$BASE".."$HEAD"); do
+            if ! git log -1 --format='%B' "$SHA" | grep -qiE '^Signed-off-by:'; then
+              MISSING="$MISSING $SHA"
+            fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::The following commits are missing DCO sign-off:$MISSING"
+            echo "Please amend with: git commit --amend --signoff"
+            exit 1
+          fi
+          echo "All commits have DCO sign-off."
