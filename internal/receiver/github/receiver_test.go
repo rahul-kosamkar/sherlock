@@ -341,7 +341,8 @@ func TestFingerprint_Format(t *testing.T) {
 		t.Errorf("fingerprint length = %d, want 64 (sha256 hex)", len(fp))
 	}
 	for _, c := range fp {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+		isHex := (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')
+		if !isHex {
 			t.Errorf("fingerprint contains non-hex char: %c", c)
 			break
 		}

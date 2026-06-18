@@ -194,7 +194,7 @@ func (p *Publisher) buildRuleResultBlocks(result *contracts.InvestigationResult)
 	}
 
 	if len(result.RecommendedActions) > 0 {
-		var actionLines []string
+		actionLines := make([]string, 0, len(result.RecommendedActions))
 		for _, a := range result.RecommendedActions {
 			actionLines = append(actionLines, fmt.Sprintf("- %s", a.Title))
 		}

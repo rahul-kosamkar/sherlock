@@ -136,15 +136,15 @@ func (r *DeployProximityRule) buildNarrative(deploy *contracts.Evidence, gitChan
 	env := deploy.Attributes["environment"]
 	creator := deploy.Attributes["creator"]
 
-	sb.WriteString(fmt.Sprintf("Deployment of %s to %s by %s occurred at %s, ",
-		shortSHAForRule(sha), env, creator, deploy.ObservedAtFrom.Format(time.RFC3339)))
+	fmt.Fprintf(&sb, "Deployment of %s to %s by %s occurred at %s, ",
+		shortSHAForRule(sha), env, creator, deploy.ObservedAtFrom.Format(time.RFC3339))
 	sb.WriteString("within close temporal proximity to the alert onset. ")
 
 	if len(gitChanges) > 0 {
 		for _, gc := range gitChanges {
 			if fc := gc.Attributes["files_changed"]; fc != "" {
 				commits := gc.Attributes["commit_count"]
-				sb.WriteString(fmt.Sprintf("The deployment included %s files changed across %s commits. ", fc, commits))
+				fmt.Fprintf(&sb, "The deployment included %s files changed across %s commits. ", fc, commits)
 				break
 			}
 		}

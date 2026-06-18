@@ -1,66 +1,77 @@
+version: "2"
 run:
-  timeout: 5m
   modules-download-mode: readonly
-
 linters:
   enable:
-    - errcheck
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
-    - gosimple
-    - gocritic
-    - gofmt
-    - goimports
-    - misspell
-    - unconvert
-    - unparam
     - bodyclose
-    - noctx
-    - prealloc
-    - revive
     - errname
     - errorlint
     - exhaustive
+    - gocritic
+    - misspell
     - nilerr
+    - noctx
+    - prealloc
+    - revive
+    - unconvert
+    - unparam
     - whitespace
-
-linters-settings:
-  gocritic:
-    enabled-checks:
-      - dupImport
-      - nestingReduce
-  revive:
+  settings:
+    errcheck:
+      check-type-assertions: true
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocritic:
+      enabled-checks:
+        - dupImport
+        - nestingReduce
+    govet:
+      disable:
+        - fieldalignment
+        - shadow
+      enable-all: true
+    revive:
+      rules:
+        - name: blank-imports
+        - name: exported
+          arguments:
+            - disableStutteringCheck
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: blank-imports
-      - name: exported
-        arguments:
-          - "disableStutteringCheck"
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
-  exhaustive:
-    default-signifies-exhaustive: true
-  errcheck:
-    check-type-assertions: true
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-      - shadow
-
+      - linters:
+          - errcheck
+          - gocritic
+          - noctx
+          - revive
+          - unparam
+          - unused
+        path: _test\.go
+      - linters:
+          - gocritic
+        text: unnecessaryDefer
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gocritic
-        - unparam
-        - revive
-        - unused
-    - linters:
-        - gocritic
-      text: "unnecessaryDefer"
   max-issues-per-linter: 0
   max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

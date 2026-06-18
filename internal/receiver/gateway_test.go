@@ -80,7 +80,9 @@ func (m *mockReceiver) Decode(_ context.Context, _ http.Header, _ []byte) ([]con
 	if m.decodeErr != nil {
 		return nil, m.decodeErr
 	}
-	return m.alerts, nil
+	cp := make([]contracts.NormalizedAlert, len(m.alerts))
+	copy(cp, m.alerts)
+	return cp, nil
 }
 
 // --- helpers ---

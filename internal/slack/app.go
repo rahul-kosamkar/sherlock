@@ -277,7 +277,7 @@ func (a *App) handleExpandEvidence(ctx context.Context, action transport.Interac
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("*Evidence for investigation %s:*\n", investigationID))
+	fmt.Fprintf(&sb, "*Evidence for investigation %s:*\n", investigationID)
 
 	kindOrder := []contracts.EvidenceKind{
 		contracts.EvidenceK8sState,
@@ -295,7 +295,7 @@ func (a *App) handleExpandEvidence(ctx context.Context, action transport.Interac
 		if !ok {
 			continue
 		}
-		sb.WriteString(fmt.Sprintf("\n*[%s]* (%d items)\n", string(kind), len(items)))
+		fmt.Fprintf(&sb, "\n*[%s]* (%d items)\n", string(kind), len(items))
 		for _, item := range items {
 			line := fmt.Sprintf("• %s\n", item.Summary)
 			if sb.Len()+len(line) > 2800 {
@@ -481,24 +481,26 @@ func (a *App) handleCompareDeployments(ctx context.Context, action transport.Int
 	sb.WriteString("*Deployment Comparison:*\n")
 
 	for _, e := range deployItems {
-		if e.Kind == contracts.EvidenceDeploy {
+		switch e.Kind {
+		case contracts.EvidenceDeploy:
 			sha := e.Attributes["sha"]
 			env := e.Attributes["environment"]
 			creator := e.Attributes["creator"]
 			status := e.Attributes["status"]
-			sb.WriteString(fmt.Sprintf("\n*Deploy:* `%s` to `%s` by %s (status: %s)\n",
-				shortSHA(sha), env, creator, status))
-		} else if e.Kind == contracts.EvidenceGitChange {
+			fmt.Fprintf(&sb, "\n*Deploy:* `%s` to `%s` by %s (status: %s)\n",
+				shortSHA(sha), env, creator, status)
+		case contracts.EvidenceGitChange:
 			filesChanged := e.Attributes["files_changed"]
 			commitCount := e.Attributes["commit_count"]
 			if filesChanged != "" {
-				sb.WriteString(fmt.Sprintf("• %s files changed across %s commits\n", filesChanged, commitCount))
+				fmt.Fprintf(&sb, "• %s files changed across %s commits\n", filesChanged, commitCount)
 			}
 			if msg := e.Attributes["message"]; msg != "" {
-				sb.WriteString(fmt.Sprintf("• Commit: %s\n", truncateSlackText(firstLine(msg), 120)))
+				fmt.Fprintf(&sb, "• Commit: %s\n", truncateSlackText(firstLine(msg), 120))
 			} else {
-				sb.WriteString(fmt.Sprintf("• %s\n", truncateSlackText(e.Summary, 200)))
+				fmt.Fprintf(&sb, "• %s\n", truncateSlackText(e.Summary, 200))
 			}
+		default:
 		}
 
 		if sb.Len() > 2800 {
