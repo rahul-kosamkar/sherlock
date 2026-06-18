@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 )
 
 type mockHandler struct {
+	mu          sync.Mutex
 	slashCmd    *SlashCommand
 	shortcut    *MessageShortcut
 	interaction *InteractionAction
@@ -25,22 +27,40 @@ type mockHandler struct {
 }
 
 func (m *mockHandler) HandleSlashCommand(_ context.Context, cmd SlashCommand) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.slashCmd = &cmd
 	return m.err
 }
 
 func (m *mockHandler) HandleMessageShortcut(_ context.Context, shortcut MessageShortcut) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.shortcut = &shortcut
 	return m.err
 }
 
 func (m *mockHandler) HandleInteraction(_ context.Context, action InteractionAction) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.interaction = &action
 	return m.err
 }
 
 func (m *mockHandler) HandleAppMention(_ context.Context, _, _, _ string) error {
 	return m.err
+}
+
+func (m *mockHandler) getSlashCmd() *SlashCommand {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.slashCmd
+}
+
+func (m *mockHandler) getShortcut() *MessageShortcut {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.shortcut
 }
 
 func signRequest(secret, timestamp string, body []byte) string {
@@ -170,7 +190,7 @@ func TestHTTPTransport_SlashCommand_ValidRequest(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	if h.slashCmd == nil {
+	if h.getSlashCmd() == nil {
 		t.Error("expected handler to receive SlashCommand")
 	}
 }
@@ -221,7 +241,7 @@ func TestHTTPTransport_Interaction_MessageAction(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	if h.shortcut == nil {
+	if h.getShortcut() == nil {
 		t.Error("expected handler to receive MessageShortcut for message_action")
 	}
 }
