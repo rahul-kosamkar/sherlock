@@ -8,6 +8,7 @@ import (
 )
 
 func TestParseAnalysis_FullResponse(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: Pod is crash-looping due to OOM
 ROOT_CAUSE: The application heap exceeds the 512Mi memory limit after processing large payloads. Exit code 137 confirms SIGKILL by the OOM killer.
 SEVERITY: critical
@@ -70,6 +71,7 @@ FOLLOW_UP:
 }
 
 func TestParseAnalysis_MultilineRootCause(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: Service degraded
 ROOT_CAUSE: First line of root cause.
 Second line continues the analysis.
@@ -90,6 +92,7 @@ SEVERITY: high`
 }
 
 func TestParseAnalysis_MinimalResponse(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: Something broke
 ROOT_CAUSE: Unknown at this time`
 
@@ -116,6 +119,7 @@ ROOT_CAUSE: Unknown at this time`
 }
 
 func TestParseAnalysis_ActionRequired_Yes(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: s
 ROOT_CAUSE: r
 ACTION_REQUIRED: yes`
@@ -127,6 +131,7 @@ ACTION_REQUIRED: yes`
 }
 
 func TestParseAnalysis_ActionRequired_No(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: s
 ROOT_CAUSE: r
 ACTION_REQUIRED: no`
@@ -138,6 +143,7 @@ ACTION_REQUIRED: no`
 }
 
 func TestParseAnalysis_ActionRequired_CaseInsensitive(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		value string
@@ -150,6 +156,7 @@ func TestParseAnalysis_ActionRequired_CaseInsensitive(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			raw := "SUMMARY: s\nROOT_CAUSE: r\nACTION_REQUIRED: " + tt.value
 			a := ParseAnalysis(raw)
 			if a.ActionRequired != tt.want {
@@ -160,6 +167,7 @@ func TestParseAnalysis_ActionRequired_CaseInsensitive(t *testing.T) {
 }
 
 func TestParseAnalysis_BugFixable_Yes(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: s
 ROOT_CAUSE: r
 BUG_FIXABLE: yes`
@@ -171,6 +179,7 @@ BUG_FIXABLE: yes`
 }
 
 func TestParseAnalysis_Confidence_Values(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		value string
@@ -182,6 +191,7 @@ func TestParseAnalysis_Confidence_Values(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			raw := "SUMMARY: s\nROOT_CAUSE: r\nCONFIDENCE: " + tt.value
 			a := ParseAnalysis(raw)
 			if a.Confidence != tt.want {
@@ -192,6 +202,7 @@ func TestParseAnalysis_Confidence_Values(t *testing.T) {
 }
 
 func TestParseAnalysis_Recommendations(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: s
 ROOT_CAUSE: r
 RECOMMENDATIONS:
@@ -215,6 +226,7 @@ RECOMMENDATIONS:
 }
 
 func TestParseAnalysis_EmptyInput(t *testing.T) {
+	t.Parallel()
 	a := ParseAnalysis("")
 
 	if a.Summary != "" {
@@ -229,6 +241,7 @@ func TestParseAnalysis_EmptyInput(t *testing.T) {
 }
 
 func TestParseAnalysis_GarbageInput(t *testing.T) {
+	t.Parallel()
 	raw := "This is just random text without any structured fields at all."
 	a := ParseAnalysis(raw)
 
@@ -238,6 +251,7 @@ func TestParseAnalysis_GarbageInput(t *testing.T) {
 }
 
 func TestParseFollowUps_AllTools(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: s
 ROOT_CAUSE: r
 FOLLOW_UP:
@@ -273,6 +287,7 @@ FOLLOW_UP:
 }
 
 func TestParseFollowUps_TraceLogs_MultipleIDs(t *testing.T) {
+	t.Parallel()
 	raw := `FOLLOW_UP:
 - TRACE_LOGS: id1, id2, id3`
 
@@ -286,6 +301,7 @@ func TestParseFollowUps_TraceLogs_MultipleIDs(t *testing.T) {
 }
 
 func TestParseFollowUps_NoFollowUp(t *testing.T) {
+	t.Parallel()
 	raw := `SUMMARY: s
 ROOT_CAUSE: r
 RECOMMENDATIONS:
@@ -298,6 +314,7 @@ RECOMMENDATIONS:
 }
 
 func TestParseFollowUps_EmptyFollowUp(t *testing.T) {
+	t.Parallel()
 	raw := `FOLLOW_UP:
 `
 	fus := ParseFollowUps(raw)
@@ -307,6 +324,7 @@ func TestParseFollowUps_EmptyFollowUp(t *testing.T) {
 }
 
 func TestParseFollowUps_MixedCase(t *testing.T) {
+	t.Parallel()
 	raw := `FOLLOW_UP:
 - trace_logs: abc
 - TRACE_LOGS: def`
@@ -334,6 +352,7 @@ func makeEvidence(ids ...string) []contracts.Evidence {
 }
 
 func TestMapToHypotheses_Basic(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{
 		Summary:   "Pod crash due to OOM",
 		RootCause: "Memory exhaustion",
@@ -352,6 +371,7 @@ func TestMapToHypotheses_Basic(t *testing.T) {
 }
 
 func TestMapToHypotheses_ConfidenceMapping(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		confidence string
@@ -364,6 +384,7 @@ func TestMapToHypotheses_ConfidenceMapping(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			a := &LLMAnalysis{Confidence: tt.confidence}
 			hyps := MapToHypotheses(a, nil)
 			if hyps[0].Confidence != tt.want {
@@ -374,6 +395,7 @@ func TestMapToHypotheses_ConfidenceMapping(t *testing.T) {
 }
 
 func TestMapToHypotheses_CauseCategory_OOM(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{RootCause: "Container was killed due to oom, heap limit exceeded"}
 	hyps := MapToHypotheses(a, nil)
 	if hyps[0].CauseCategory != contracts.CauseCapacity {
@@ -382,6 +404,7 @@ func TestMapToHypotheses_CauseCategory_OOM(t *testing.T) {
 }
 
 func TestMapToHypotheses_CauseCategory_Deploy(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{RootCause: "Recent deployment introduced a regression in the handler"}
 	hyps := MapToHypotheses(a, nil)
 	if hyps[0].CauseCategory != contracts.CauseDeploy {
@@ -390,6 +413,7 @@ func TestMapToHypotheses_CauseCategory_Deploy(t *testing.T) {
 }
 
 func TestMapToHypotheses_CauseCategory_Code(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{RootCause: "A nil pointer dereference in the request handler causes a panic"}
 	hyps := MapToHypotheses(a, nil)
 	if hyps[0].CauseCategory != contracts.CauseCode {
@@ -398,6 +422,7 @@ func TestMapToHypotheses_CauseCategory_Code(t *testing.T) {
 }
 
 func TestMapToHypotheses_CauseCategory_Infra(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{RootCause: "Node scheduling failure prevented pod from starting"}
 	hyps := MapToHypotheses(a, nil)
 	if hyps[0].CauseCategory != contracts.CauseInfra {
@@ -406,6 +431,7 @@ func TestMapToHypotheses_CauseCategory_Infra(t *testing.T) {
 }
 
 func TestMapToHypotheses_CauseCategory_Config(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{RootCause: "A misconfiguration of the database connection string caused failures"}
 	hyps := MapToHypotheses(a, nil)
 	if hyps[0].CauseCategory != contracts.CauseConfig {
@@ -414,6 +440,7 @@ func TestMapToHypotheses_CauseCategory_Config(t *testing.T) {
 }
 
 func TestMapToHypotheses_CauseCategory_Default(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{RootCause: "Something happened but no keywords match"}
 	hyps := MapToHypotheses(a, nil)
 	if hyps[0].CauseCategory != contracts.CauseCode {
@@ -422,6 +449,7 @@ func TestMapToHypotheses_CauseCategory_Default(t *testing.T) {
 }
 
 func TestMapToHypotheses_Recommendations(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{
 		Recommendations: []string{"Restart the pod", "Check memory limits", "Review recent commits"},
 	}
@@ -444,6 +472,7 @@ func TestMapToHypotheses_Recommendations(t *testing.T) {
 }
 
 func TestMapToHypotheses_EmptyAnalysis(t *testing.T) {
+	t.Parallel()
 	a := &LLMAnalysis{}
 	hyps := MapToHypotheses(a, nil)
 
@@ -465,6 +494,7 @@ func TestMapToHypotheses_EmptyAnalysis(t *testing.T) {
 }
 
 func TestMapToHypotheses_SupportingEvidence(t *testing.T) {
+	t.Parallel()
 	evidence := makeEvidence("ev-1", "ev-2", "ev-3")
 	a := &LLMAnalysis{Summary: "test"}
 	hyps := MapToHypotheses(a, evidence)

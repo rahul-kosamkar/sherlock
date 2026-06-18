@@ -6,6 +6,7 @@ import (
 )
 
 func TestNew_ReturnsStore(t *testing.T) {
+	t.Parallel()
 	store, err := New(context.Background(), "http://localhost:9000", "test-bucket", "us-east-1", "minioadmin", "minioadmin", true)
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
@@ -19,6 +20,7 @@ func TestNew_ReturnsStore(t *testing.T) {
 }
 
 func TestNew_WithoutEndpoint(t *testing.T) {
+	t.Parallel()
 	store, err := New(context.Background(), "", "bucket", "us-west-2", "key", "secret", false)
 	if err != nil {
 		t.Fatalf("New() error = %v", err)

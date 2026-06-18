@@ -23,6 +23,7 @@ func newOllamaTestProvider(url string) *OllamaProvider {
 }
 
 func TestOllama_Complete_Success(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/chat" {
 			t.Errorf("request path = %q, want %q", r.URL.Path, "/api/chat")
@@ -58,6 +59,7 @@ func TestOllama_Complete_Success(t *testing.T) {
 }
 
 func TestOllama_Complete_WithSystemPrompt(t *testing.T) {
+	t.Parallel()
 	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -98,6 +100,7 @@ func TestOllama_Complete_WithSystemPrompt(t *testing.T) {
 }
 
 func TestOllama_Complete_StreamDisabled(t *testing.T) {
+	t.Parallel()
 	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +131,7 @@ func TestOllama_Complete_StreamDisabled(t *testing.T) {
 }
 
 func TestOllama_Complete_ServerError(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`model not found`))
@@ -145,6 +149,7 @@ func TestOllama_Complete_ServerError(t *testing.T) {
 }
 
 func TestOllama_Complete_DefaultEndpoint(t *testing.T) {
+	t.Parallel()
 	p := NewOllamaProvider(ProviderConfig{
 		Provider: "ollama",
 		Model:    "llama3",
@@ -155,6 +160,7 @@ func TestOllama_Complete_DefaultEndpoint(t *testing.T) {
 }
 
 func TestOllama_Complete_CustomEndpoint(t *testing.T) {
+	t.Parallel()
 	var requestReceived bool
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestReceived = true
@@ -183,6 +189,7 @@ func TestOllama_Complete_CustomEndpoint(t *testing.T) {
 }
 
 func TestOllama_Complete_Options(t *testing.T) {
+	t.Parallel()
 	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -12,6 +12,7 @@ import (
 )
 
 func TestGitHubProvider_Name(t *testing.T) {
+	t.Parallel()
 	p := NewGitHubProvider(Config{}, zap.NewNop())
 	if got := p.Name(); got != "github" {
 		t.Errorf("Name() = %q, want %q", got, "github")
@@ -19,7 +20,9 @@ func TestGitHubProvider_Name(t *testing.T) {
 }
 
 func TestGitHubProvider_ResolveRepo(t *testing.T) {
+	t.Parallel()
 	t.Run("Found", func(t *testing.T) {
+		t.Parallel()
 		repos := map[string]string{
 			"payment-service": "payments-repo",
 		}
@@ -35,6 +38,7 @@ func TestGitHubProvider_ResolveRepo(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
+		t.Parallel()
 		p := NewGitHubProvider(Config{WorkloadRepos: map[string]string{}}, zap.NewNop())
 
 		repo, ok := p.ResolveRepo("unknown-service")
@@ -48,6 +52,7 @@ func TestGitHubProvider_ResolveRepo(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_Success(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "package main\n\nfunc main() {}")
@@ -69,6 +74,7 @@ func TestGitHubProvider_FetchFiles_Success(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_MultipleFiles(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "file1.go") {
 			fmt.Fprint(w, "content1")
@@ -98,6 +104,7 @@ func TestGitHubProvider_FetchFiles_MultipleFiles(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_FileNotFound(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "exists.go") {
 			fmt.Fprint(w, "found")
@@ -122,6 +129,7 @@ func TestGitHubProvider_FetchFiles_FileNotFound(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_ServerError(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
@@ -139,6 +147,7 @@ func TestGitHubProvider_FetchFiles_ServerError(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_TruncatesLargeFile(t *testing.T) {
+	t.Parallel()
 	largeContent := strings.Repeat("x", 500)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, largeContent)
@@ -158,6 +167,7 @@ func TestGitHubProvider_FetchFiles_TruncatesLargeFile(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_MaxFilesLimit(t *testing.T) {
+	t.Parallel()
 	callCount := 0
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		callCount++
@@ -186,6 +196,7 @@ func TestGitHubProvider_FetchFiles_MaxFilesLimit(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_AuthHeader(t *testing.T) {
+	t.Parallel()
 	var gotAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
@@ -208,6 +219,7 @@ func TestGitHubProvider_FetchFiles_AuthHeader(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_AcceptHeader(t *testing.T) {
+	t.Parallel()
 	var gotAccept string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAccept = r.Header.Get("Accept")
@@ -229,6 +241,7 @@ func TestGitHubProvider_FetchFiles_AcceptHeader(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_URLConstruction(t *testing.T) {
+	t.Parallel()
 	var gotURL string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotURL = r.URL.String()
@@ -252,6 +265,7 @@ func TestGitHubProvider_FetchFiles_URLConstruction(t *testing.T) {
 }
 
 func TestGitHubProvider_FetchFiles_EmptyPaths(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("no HTTP request expected for empty paths")
 	}))
@@ -269,6 +283,7 @@ func TestGitHubProvider_FetchFiles_EmptyPaths(t *testing.T) {
 }
 
 func TestGitHubProvider_Defaults(t *testing.T) {
+	t.Parallel()
 	p := NewGitHubProvider(Config{}, zap.NewNop())
 
 	if p.defaultBranch != "main" {
@@ -283,6 +298,7 @@ func TestGitHubProvider_Defaults(t *testing.T) {
 }
 
 func TestNoopProvider_FetchFiles(t *testing.T) {
+	t.Parallel()
 	p := NewNoopProvider()
 
 	results, err := p.FetchFiles(context.Background(), "any-repo", []string{"file.go"})
@@ -295,6 +311,7 @@ func TestNoopProvider_FetchFiles(t *testing.T) {
 }
 
 func TestNoopProvider_ResolveRepo(t *testing.T) {
+	t.Parallel()
 	p := NewNoopProvider()
 
 	repo, ok := p.ResolveRepo("anything")
@@ -307,6 +324,7 @@ func TestNoopProvider_ResolveRepo(t *testing.T) {
 }
 
 func TestNewGitHubProvider_CustomConfig(t *testing.T) {
+	t.Parallel()
 	cfg := Config{
 		Token:         "custom-token",
 		Organization:  "custom-org",
@@ -338,6 +356,7 @@ func TestNewGitHubProvider_CustomConfig(t *testing.T) {
 }
 
 func TestNewGitHubProvider_DefaultConfig(t *testing.T) {
+	t.Parallel()
 	p := NewGitHubProvider(Config{}, zap.NewNop())
 
 	if p.defaultBranch != "main" {

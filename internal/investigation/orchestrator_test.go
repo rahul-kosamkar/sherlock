@@ -143,34 +143,37 @@ func (m *mockAuditLogger) Log(ctx context.Context, tenantID, actor, action, targ
 
 type mockQueueConsumer struct{}
 
-func (m *mockQueueConsumer) Subscribe(ctx context.Context, subject string, handler func(msg []byte) error) error {
+func (m *mockQueueConsumer) Subscribe(ctx context.Context, subject string, handler func(msg []byte, ack func(), nak func()) error) error {
 	return nil
 }
 
 // --- Helpers ---
 
-func newFullOrchestrator(cfg OrchestratorConfig, rca *mockRCAService, slack *mockSlackNotifier) *Orchestrator {
-	return NewOrchestrator(
-		cfg,
-		&mockInvestigationStore{},
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		rca,
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		slack,
-		&mockAuditLogger{},
-		&mockQueueConsumer{},
-		zap.NewNop(),
-	)
+func baseDeps(rcaSvc *mockRCAService, slack SlackNotifier) OrchestratorDeps {
+	return OrchestratorDeps{
+		Investigations: &mockInvestigationStore{},
+		Evidence:       &mockEvidenceStore{},
+		Timelines:      &mockTimelineStore{},
+		Hypotheses:     &mockHypothesisStore{},
+		Alerts:         &mockAlertStore{},
+		Collectors:     &mockCollectorSet{},
+		Correlator:     &mockCorrelatorService{},
+		RCA:            rcaSvc,
+		Timeline:       &mockTimelineBuilder{},
+		Entity:         &mockEntityResolver{},
+		Slack:          slack,
+		Audit:          &mockAuditLogger{},
+		Consumer:       &mockQueueConsumer{},
+		Logger:         zap.NewNop(),
+	}
 }
 
-func testJob() investigationJob {
-	return investigationJob{
+func newFullOrchestrator(rcaSvc *mockRCAService, slack SlackNotifier, opts ...Option) *Orchestrator {
+	return NewOrchestrator(baseDeps(rcaSvc, slack), opts...)
+}
+
+func testJob() contracts.InvestigationJob {
+	return contracts.InvestigationJob{
 		Alert: contracts.NormalizedAlert{
 			ID:       "alert-orch-001",
 			TenantID: "tenant-1",
@@ -207,11 +210,7 @@ func TestOrchestrator_SelectsLLM_WhenEnabled(t *testing.T) {
 	ruleBased := &mockRCAService{name: "rule-based"}
 	llmEngine := &mockRCAService{name: "llm-powered"}
 
-	o := &Orchestrator{
-		rca:        ruleBased,
-		llmEnabled: true,
-	}
-	o.SetLLMEngine(llmEngine)
+	o := NewOrchestrator(baseDeps(ruleBased, &mockSlackNotifier{}), WithLLMEngine(llmEngine))
 
 	engine := o.selectRCAEngine()
 	if engine.Name() != "llm-powered" {
@@ -225,7 +224,6 @@ func TestOrchestrator_SelectsRuleBased_WhenLLMNil(t *testing.T) {
 	o := &Orchestrator{
 		rca:        ruleBased,
 		llmEnabled: true,
-		// llmRCA intentionally not set
 	}
 
 	engine := o.selectRCAEngine()
@@ -244,12 +242,7 @@ func TestOrchestrator_ResultIncludesRCAEngine(t *testing.T) {
 	slack := &mockSlackNotifier{}
 	ruleBased := &mockRCAService{name: "rule-based"}
 
-	o := newFullOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute, LLMEnabled: true},
-		ruleBased,
-		slack,
-	)
-	o.SetLLMEngine(llmRCA)
+	o := newFullOrchestrator(ruleBased, slack, WithLLMEngine(llmRCA))
 
 	err := o.runInvestigation(context.Background(), testJob())
 	if err != nil {
@@ -267,7 +260,7 @@ func TestOrchestrator_ResultIncludesRCAEngine(t *testing.T) {
 }
 
 func TestOrchestrator_ResultIncludesRootCause(t *testing.T) {
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name: "rule-based",
 		hypotheses: []contracts.Hypothesis{
 			{
@@ -280,11 +273,7 @@ func TestOrchestrator_ResultIncludesRootCause(t *testing.T) {
 	}
 	slack := &mockSlackNotifier{}
 
-	o := newFullOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		rca,
-		slack,
-	)
+	o := newFullOrchestrator(rcaSvc, slack)
 
 	err := o.runInvestigation(context.Background(), testJob())
 	if err != nil {
@@ -346,14 +335,14 @@ func (m *mockSlackNotifierWithErrors) PostError(ctx context.Context, channelID, 
 // --- Additional Tests ---
 
 func TestNewOrchestrator_DefaultMaxConcurrent(t *testing.T) {
-	o := newFullOrchestrator(OrchestratorConfig{MaxConcurrent: 0}, &mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+	o := newFullOrchestrator(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
 	if o.maxConcurrent != 10 {
 		t.Errorf("maxConcurrent = %d, want 10", o.maxConcurrent)
 	}
 }
 
 func TestNewOrchestrator_DefaultTimeout(t *testing.T) {
-	o := newFullOrchestrator(OrchestratorConfig{Timeout: 0}, &mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+	o := newFullOrchestrator(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
 	want := 5 * time.Minute
 	if o.timeout != want {
 		t.Errorf("timeout = %v, want %v", o.timeout, want)
@@ -362,9 +351,10 @@ func TestNewOrchestrator_DefaultTimeout(t *testing.T) {
 
 func TestNewOrchestrator_CustomValues(t *testing.T) {
 	o := newFullOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 5, Timeout: 2 * time.Minute},
 		&mockRCAService{name: "rule-based"},
 		&mockSlackNotifier{},
+		WithMaxConcurrent(5),
+		WithTimeout(2*time.Minute),
 	)
 	if o.maxConcurrent != 5 {
 		t.Errorf("maxConcurrent = %d, want 5", o.maxConcurrent)
@@ -375,7 +365,7 @@ func TestNewOrchestrator_CustomValues(t *testing.T) {
 }
 
 func TestRunInvestigation_FullFlow(t *testing.T) {
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name: "rule-based",
 		hypotheses: []contracts.Hypothesis{
 			{ID: "h-1", Title: "OOM Kill", Narrative: "Pod killed by OOM", Confidence: 0.85},
@@ -384,23 +374,9 @@ func TestRunInvestigation_FullFlow(t *testing.T) {
 	slack := &mockSlackNotifier{}
 	invStore := &mockInvestigationStore{}
 
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		invStore,
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		rca,
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		slack,
-		&mockAuditLogger{},
-		&mockQueueConsumer{},
-		zap.NewNop(),
-	)
+	deps := baseDeps(rcaSvc, slack)
+	deps.Investigations = invStore
+	o := NewOrchestrator(deps)
 
 	err := o.runInvestigation(context.Background(), testJob())
 	if err != nil {
@@ -425,17 +401,13 @@ func TestRunInvestigation_FullFlow(t *testing.T) {
 }
 
 func TestRunInvestigation_NoHypotheses(t *testing.T) {
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name:       "rule-based",
 		hypotheses: nil,
 	}
 	slack := &mockSlackNotifier{}
 
-	o := newFullOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		rca,
-		slack,
-	)
+	o := newFullOrchestrator(rcaSvc, slack)
 
 	err := o.runInvestigation(context.Background(), testJob())
 	if err != nil {
@@ -456,7 +428,7 @@ func TestRunInvestigation_NoHypotheses(t *testing.T) {
 }
 
 func TestRunInvestigation_NoSlackChannel(t *testing.T) {
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name: "rule-based",
 		hypotheses: []contracts.Hypothesis{
 			{ID: "h-1", Title: "Disk full", Confidence: 0.7},
@@ -464,11 +436,7 @@ func TestRunInvestigation_NoSlackChannel(t *testing.T) {
 	}
 	slack := &mockSlackNotifier{}
 
-	o := newFullOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		rca,
-		slack,
-	)
+	o := newFullOrchestrator(rcaSvc, slack)
 
 	job := testJob()
 	job.SlackChannelID = ""
@@ -484,29 +452,13 @@ func TestRunInvestigation_NoSlackChannel(t *testing.T) {
 }
 
 func TestRunInvestigation_RCAError(t *testing.T) {
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name: "rule-based",
 		err:  fmt.Errorf("model unavailable"),
 	}
 	slackNotif := &mockSlackNotifierWithErrors{}
 
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		&mockInvestigationStore{},
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		rca,
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		slackNotif,
-		&mockAuditLogger{},
-		&mockQueueConsumer{},
-		zap.NewNop(),
-	)
+	o := NewOrchestrator(baseDeps(rcaSvc, slackNotif))
 
 	err := o.runInvestigation(context.Background(), testJob())
 	if err == nil {
@@ -521,23 +473,9 @@ func TestRunInvestigation_RCAError(t *testing.T) {
 func TestRunInvestigation_InvestigationCreateError(t *testing.T) {
 	invStore := &mockInvestigationStore{err: fmt.Errorf("db connection refused")}
 
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		invStore,
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		&mockRCAService{name: "rule-based"},
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		&mockSlackNotifier{},
-		&mockAuditLogger{},
-		&mockQueueConsumer{},
-		zap.NewNop(),
-	)
+	deps := baseDeps(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+	deps.Investigations = invStore
+	o := NewOrchestrator(deps)
 
 	err := o.runInvestigation(context.Background(), testJob())
 	if err == nil {
@@ -566,7 +504,7 @@ func TestEnqueueInvestigation_Success(t *testing.T) {
 		t.Errorf("published subject = %q, want %q", pub.subject, "investigations.new")
 	}
 
-	var job investigationJob
+	var job contracts.InvestigationJob
 	if err := json.Unmarshal(pub.data, &job); err != nil {
 		t.Fatalf("failed to unmarshal published data: %v", err)
 	}
@@ -610,7 +548,7 @@ func TestEnqueueInvestigation_PublishError(t *testing.T) {
 
 func TestFailInvestigation_PostsErrorToSlack(t *testing.T) {
 	slackNotif := &mockSlackNotifierWithErrors{}
-	o := newFullOrchestrator(OrchestratorConfig{}, &mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+	o := newFullOrchestrator(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
 	o.slack = slackNotif
 
 	inv := &contracts.Investigation{
@@ -631,7 +569,7 @@ func TestFailInvestigation_PostsErrorToSlack(t *testing.T) {
 
 func TestFailInvestigation_NoSlackChannel(t *testing.T) {
 	slackNotif := &mockSlackNotifierWithErrors{}
-	o := newFullOrchestrator(OrchestratorConfig{}, &mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+	o := newFullOrchestrator(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
 	o.slack = slackNotif
 
 	inv := &contracts.Investigation{
@@ -653,7 +591,7 @@ func TestRunInvestigation_WithCollectedEvidence(t *testing.T) {
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Summary: "CrashLoopBackOff"},
 		{ID: "ev-2", Kind: contracts.EvidenceLog, Summary: "error logs"},
 	}
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name: "rule-based",
 		hypotheses: []contracts.Hypothesis{
 			{ID: "h-1", Title: "Container crash", Confidence: 0.8, Narrative: "CrashLoop detected"},
@@ -662,23 +600,10 @@ func TestRunInvestigation_WithCollectedEvidence(t *testing.T) {
 	slack := &mockSlackNotifier{}
 	hypStore := &mockHypothesisStore{}
 
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		&mockInvestigationStore{},
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		hypStore,
-		&mockAlertStore{},
-		&mockCollectorSet{evidence: evidence},
-		&mockCorrelatorService{},
-		rca,
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		slack,
-		&mockAuditLogger{},
-		&mockQueueConsumer{},
-		zap.NewNop(),
-	)
+	deps := baseDeps(rcaSvc, slack)
+	deps.Hypotheses = hypStore
+	deps.Collectors = &mockCollectorSet{evidence: evidence}
+	o := NewOrchestrator(deps)
 
 	err := o.runInvestigation(context.Background(), testJob())
 	if err != nil {
@@ -703,7 +628,7 @@ func TestRunInvestigation_WithCollectedEvidence(t *testing.T) {
 }
 
 func TestRunInvestigation_WithSuggestedFixes(t *testing.T) {
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name: "rule-based",
 		hypotheses: []contracts.Hypothesis{
 			{
@@ -719,11 +644,7 @@ func TestRunInvestigation_WithSuggestedFixes(t *testing.T) {
 	}
 	slack := &mockSlackNotifier{}
 
-	o := newFullOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		rca,
-		slack,
-	)
+	o := newFullOrchestrator(rcaSvc, slack)
 
 	err := o.runInvestigation(context.Background(), testJob())
 	if err != nil {
@@ -740,30 +661,15 @@ func TestRunInvestigation_WithSuggestedFixes(t *testing.T) {
 }
 
 func TestRunInvestigation_NilSlackNotifier(t *testing.T) {
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name: "rule-based",
 		hypotheses: []contracts.Hypothesis{
 			{ID: "h-1", Title: "Test", Confidence: 0.5},
 		},
 	}
 
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		&mockInvestigationStore{},
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		rca,
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		nil,
-		&mockAuditLogger{},
-		&mockQueueConsumer{},
-		zap.NewNop(),
-	)
+	deps := baseDeps(rcaSvc, nil)
+	o := NewOrchestrator(deps)
 
 	job := testJob()
 	job.SlackChannelID = "C-test"
@@ -774,31 +680,34 @@ func TestRunInvestigation_NilSlackNotifier(t *testing.T) {
 	}
 }
 
-func TestSetLLMEngine(t *testing.T) {
-	o := newFullOrchestrator(OrchestratorConfig{LLMEnabled: true}, &mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+func TestWithLLMEngine(t *testing.T) {
+	o := newFullOrchestrator(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
 
 	if o.llmRCA != nil {
-		t.Fatal("llmRCA should be nil before SetLLMEngine")
+		t.Fatal("llmRCA should be nil before WithLLMEngine")
 	}
 
-	llm := &mockRCAService{name: "llm-powered"}
-	o.SetLLMEngine(llm)
+	llmSvc := &mockRCAService{name: "llm-powered"}
+	o2 := NewOrchestrator(baseDeps(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{}), WithLLMEngine(llmSvc))
 
-	if o.llmRCA == nil {
-		t.Fatal("llmRCA should not be nil after SetLLMEngine")
+	if o2.llmRCA == nil {
+		t.Fatal("llmRCA should not be nil after WithLLMEngine")
 	}
-	if o.llmRCA.Name() != "llm-powered" {
-		t.Errorf("llmRCA.Name() = %q, want %q", o.llmRCA.Name(), "llm-powered")
+	if o2.llmRCA.Name() != "llm-powered" {
+		t.Errorf("llmRCA.Name() = %q, want %q", o2.llmRCA.Name(), "llm-powered")
+	}
+	if !o2.llmEnabled {
+		t.Error("llmEnabled should be true after WithLLMEngine")
 	}
 }
 
 type mockQueueConsumerCapture struct {
 	subject string
-	handler func(msg []byte) error
+	handler func(msg []byte, ack func(), nak func()) error
 	err     error
 }
 
-func (m *mockQueueConsumerCapture) Subscribe(_ context.Context, subject string, handler func(msg []byte) error) error {
+func (m *mockQueueConsumerCapture) Subscribe(_ context.Context, subject string, handler func(msg []byte, ack func(), nak func()) error) error {
 	m.subject = subject
 	m.handler = handler
 	return m.err
@@ -806,23 +715,9 @@ func (m *mockQueueConsumerCapture) Subscribe(_ context.Context, subject string, 
 
 func TestStart_SubscribesCorrectSubject(t *testing.T) {
 	consumer := &mockQueueConsumerCapture{}
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		&mockInvestigationStore{},
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		&mockRCAService{name: "rule-based"},
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		&mockSlackNotifier{},
-		&mockAuditLogger{},
-		consumer,
-		zap.NewNop(),
-	)
+	deps := baseDeps(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+	deps.Consumer = consumer
+	o := NewOrchestrator(deps)
 
 	err := o.Start(context.Background(), "investigations")
 	if err != nil {
@@ -838,23 +733,9 @@ func TestStart_SubscribesCorrectSubject(t *testing.T) {
 
 func TestStart_SubscribeError(t *testing.T) {
 	consumer := &mockQueueConsumerCapture{err: fmt.Errorf("subscribe failed")}
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		&mockInvestigationStore{},
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		&mockRCAService{name: "rule-based"},
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		&mockSlackNotifier{},
-		&mockAuditLogger{},
-		consumer,
-		zap.NewNop(),
-	)
+	deps := baseDeps(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+	deps.Consumer = consumer
+	o := NewOrchestrator(deps)
 
 	err := o.Start(context.Background(), "investigations")
 	if err == nil {
@@ -864,29 +745,15 @@ func TestStart_SubscribeError(t *testing.T) {
 
 func TestStart_HandlerProcessesJob(t *testing.T) {
 	consumer := &mockQueueConsumerCapture{}
-	rca := &mockRCAService{
+	rcaSvc := &mockRCAService{
 		name: "rule-based",
 		hypotheses: []contracts.Hypothesis{
 			{ID: "h-1", Title: "Test", Confidence: 0.7},
 		},
 	}
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		&mockInvestigationStore{},
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		rca,
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		&mockSlackNotifier{},
-		&mockAuditLogger{},
-		consumer,
-		zap.NewNop(),
-	)
+	deps := baseDeps(rcaSvc, &mockSlackNotifier{})
+	deps.Consumer = consumer
+	o := NewOrchestrator(deps)
 
 	err := o.Start(context.Background(), "investigations")
 	if err != nil {
@@ -895,41 +762,34 @@ func TestStart_HandlerProcessesJob(t *testing.T) {
 
 	job := testJob()
 	data, _ := json.Marshal(job)
-	err = consumer.handler(data)
+	acked := false
+	nacked := false
+	err = consumer.handler(data, func() { acked = true }, func() { nacked = true })
 	if err != nil {
 		t.Fatalf("handler error: %v", err)
 	}
 
-	// Wait for the goroutine
 	o.Stop()
+	if !acked {
+		t.Error("expected ack to be called on success")
+	}
+	if nacked {
+		t.Error("expected nak NOT to be called on success")
+	}
 }
 
 func TestStart_HandlerInvalidJSON(t *testing.T) {
 	consumer := &mockQueueConsumerCapture{}
-	o := NewOrchestrator(
-		OrchestratorConfig{MaxConcurrent: 1, Timeout: time.Minute},
-		&mockInvestigationStore{},
-		&mockEvidenceStore{},
-		&mockTimelineStore{},
-		&mockHypothesisStore{},
-		&mockAlertStore{},
-		&mockCollectorSet{},
-		&mockCorrelatorService{},
-		&mockRCAService{name: "rule-based"},
-		&mockTimelineBuilder{},
-		&mockEntityResolver{},
-		&mockSlackNotifier{},
-		&mockAuditLogger{},
-		consumer,
-		zap.NewNop(),
-	)
+	deps := baseDeps(&mockRCAService{name: "rule-based"}, &mockSlackNotifier{})
+	deps.Consumer = consumer
+	o := NewOrchestrator(deps)
 
 	err := o.Start(context.Background(), "investigations")
 	if err != nil {
 		t.Fatalf("Start() error: %v", err)
 	}
 
-	err = consumer.handler([]byte("not valid json"))
+	err = consumer.handler([]byte("not valid json"), func() {}, func() {})
 	if err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}

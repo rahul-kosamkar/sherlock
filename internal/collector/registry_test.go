@@ -32,6 +32,7 @@ func (m *mockCollector) Collect(ctx context.Context, req contracts.CollectReques
 }
 
 func TestRegistry_Register(t *testing.T) {
+	t.Parallel()
 	reg := NewRegistry(zap.NewNop())
 
 	c1 := &mockCollector{name: "c1", evidence: []contracts.Evidence{{ID: "e1"}}}
@@ -54,6 +55,7 @@ func TestRegistry_Register(t *testing.T) {
 }
 
 func TestRegistry_CollectAll_AggregatesResults(t *testing.T) {
+	t.Parallel()
 	reg := NewRegistry(zap.NewNop())
 
 	reg.Register(&mockCollector{
@@ -81,6 +83,7 @@ func TestRegistry_CollectAll_AggregatesResults(t *testing.T) {
 }
 
 func TestRegistry_CollectAll_CollectorError_ContinuesOthers(t *testing.T) {
+	t.Parallel()
 	reg := NewRegistry(zap.NewNop())
 
 	reg.Register(&mockCollector{
@@ -107,6 +110,7 @@ func TestRegistry_CollectAll_CollectorError_ContinuesOthers(t *testing.T) {
 }
 
 func TestRegistry_CollectAll_NoCollectors(t *testing.T) {
+	t.Parallel()
 	reg := NewRegistry(zap.NewNop())
 
 	results, err := reg.CollectAll(context.Background(), contracts.CollectRequest{})
@@ -119,6 +123,7 @@ func TestRegistry_CollectAll_NoCollectors(t *testing.T) {
 }
 
 func TestRegistry_CollectAll_Parallel(t *testing.T) {
+	t.Parallel()
 	reg := NewRegistry(zap.NewNop())
 
 	reg.Register(&mockCollector{
@@ -148,6 +153,7 @@ func TestRegistry_CollectAll_Parallel(t *testing.T) {
 }
 
 func TestRegistry_CollectAll_ContextCancellation(t *testing.T) {
+	t.Parallel()
 	reg := NewRegistry(zap.NewNop())
 
 	reg.Register(&mockCollector{
@@ -164,6 +170,7 @@ func TestRegistry_CollectAll_ContextCancellation(t *testing.T) {
 }
 
 func TestRegistry_CollectAll_PassesRequest(t *testing.T) {
+	t.Parallel()
 	reg := NewRegistry(zap.NewNop())
 
 	c1 := &mockCollector{name: "c1", evidence: []contracts.Evidence{{ID: "e1"}}}

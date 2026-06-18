@@ -61,6 +61,7 @@ func testTargets() []contracts.TargetRef {
 // --- FollowUpExecutor tests ---
 
 func TestFollowUpExecutor_TraceLogs(t *testing.T) {
+	t.Parallel()
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, req contracts.CollectRequest) ([]contracts.Evidence, error) {
 			traceID := req.Alert.Labels["trace_id"]
@@ -93,6 +94,7 @@ func TestFollowUpExecutor_TraceLogs(t *testing.T) {
 }
 
 func TestFollowUpExecutor_TimeWindowLogs(t *testing.T) {
+	t.Parallel()
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, req contracts.CollectRequest) ([]contracts.Evidence, error) {
 			return []contracts.Evidence{
@@ -131,6 +133,7 @@ func TestFollowUpExecutor_TimeWindowLogs(t *testing.T) {
 }
 
 func TestFollowUpExecutor_TimeWindowLogs_InvalidFormat(t *testing.T) {
+	t.Parallel()
 	before := time.Now().UTC()
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, _ contracts.CollectRequest) ([]contracts.Evidence, error) {
@@ -166,6 +169,7 @@ func TestFollowUpExecutor_TimeWindowLogs_InvalidFormat(t *testing.T) {
 }
 
 func TestFollowUpExecutor_PodEvents(t *testing.T) {
+	t.Parallel()
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, _ contracts.CollectRequest) ([]contracts.Evidence, error) {
 			return []contracts.Evidence{
@@ -199,6 +203,7 @@ func TestFollowUpExecutor_PodEvents(t *testing.T) {
 }
 
 func TestFollowUpExecutor_GitHubFiles(t *testing.T) {
+	t.Parallel()
 	gitProv := &mockGitProvider{
 		resolveFunc: func(workload string) (string, bool) {
 			if workload == "payment-svc" {
@@ -244,6 +249,7 @@ func TestFollowUpExecutor_GitHubFiles(t *testing.T) {
 }
 
 func TestFollowUpExecutor_GitHubFiles_NoProvider(t *testing.T) {
+	t.Parallel()
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, _ contracts.CollectRequest) ([]contracts.Evidence, error) {
 			return nil, nil
@@ -266,6 +272,7 @@ func TestFollowUpExecutor_GitHubFiles_NoProvider(t *testing.T) {
 }
 
 func TestFollowUpExecutor_GitHubFiles_NoRepoMapping(t *testing.T) {
+	t.Parallel()
 	gitProv := &mockGitProvider{
 		resolveFunc: func(_ string) (string, bool) {
 			return "", false
@@ -298,6 +305,7 @@ func TestFollowUpExecutor_GitHubFiles_NoRepoMapping(t *testing.T) {
 }
 
 func TestFollowUpExecutor_LogQuery(t *testing.T) {
+	t.Parallel()
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, req contracts.CollectRequest) ([]contracts.Evidence, error) {
 			if req.Alert.Labels["custom_query"] == "" {
@@ -326,6 +334,7 @@ func TestFollowUpExecutor_LogQuery(t *testing.T) {
 }
 
 func TestFollowUpExecutor_UnknownTool(t *testing.T) {
+	t.Parallel()
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, _ contracts.CollectRequest) ([]contracts.Evidence, error) {
 			t.Error("collector should not be called for unknown tool")
@@ -349,6 +358,7 @@ func TestFollowUpExecutor_UnknownTool(t *testing.T) {
 }
 
 func TestFollowUpExecutor_MultipleFollowUps(t *testing.T) {
+	t.Parallel()
 	callIdx := 0
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, _ contracts.CollectRequest) ([]contracts.Evidence, error) {
@@ -397,6 +407,7 @@ func TestFollowUpExecutor_MultipleFollowUps(t *testing.T) {
 }
 
 func TestFollowUpExecutor_CollectorError(t *testing.T) {
+	t.Parallel()
 	callIdx := 0
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, _ contracts.CollectRequest) ([]contracts.Evidence, error) {
@@ -431,6 +442,7 @@ func TestFollowUpExecutor_CollectorError(t *testing.T) {
 }
 
 func TestFollowUpExecutor_EmptyFollowUps(t *testing.T) {
+	t.Parallel()
 	collector := &mockCollectorSet{
 		collectFunc: func(_ context.Context, _ contracts.CollectRequest) ([]contracts.Evidence, error) {
 			t.Error("collector should not be called for empty follow-ups")
@@ -468,6 +480,7 @@ func TestFollowUpExecutor_EmptyFollowUps(t *testing.T) {
 // --- parseCSV tests ---
 
 func TestParseCSV_Basic(t *testing.T) {
+	t.Parallel()
 	got := parseCSV("a, b, c")
 	if len(got) != 3 {
 		t.Fatalf("expected 3 items; got %d", len(got))
@@ -478,6 +491,7 @@ func TestParseCSV_Basic(t *testing.T) {
 }
 
 func TestParseCSV_Whitespace(t *testing.T) {
+	t.Parallel()
 	got := parseCSV("  a , b  ")
 	if len(got) != 2 {
 		t.Fatalf("expected 2 items; got %d", len(got))
@@ -488,6 +502,7 @@ func TestParseCSV_Whitespace(t *testing.T) {
 }
 
 func TestParseCSV_Empty(t *testing.T) {
+	t.Parallel()
 	got := parseCSV("")
 	if len(got) != 0 {
 		t.Errorf("parseCSV(\"\") should return empty; got %v", got)
@@ -495,6 +510,7 @@ func TestParseCSV_Empty(t *testing.T) {
 }
 
 func TestParseCSV_SingleValue(t *testing.T) {
+	t.Parallel()
 	got := parseCSV("abc")
 	if len(got) != 1 || got[0] != "abc" {
 		t.Errorf("parseCSV(\"abc\") = %v; want [abc]", got)
@@ -504,6 +520,7 @@ func TestParseCSV_SingleValue(t *testing.T) {
 // --- parseTimeWindow tests ---
 
 func TestParseTimeWindow_ValidRFC3339(t *testing.T) {
+	t.Parallel()
 	from, to := parseTimeWindow("2024-01-15T10:00:00Z/2024-01-15T10:05:00Z")
 	expectedFrom := time.Date(2024, 1, 15, 10, 0, 0, 0, time.UTC)
 	expectedTo := time.Date(2024, 1, 15, 10, 5, 0, 0, time.UTC)
@@ -517,6 +534,7 @@ func TestParseTimeWindow_ValidRFC3339(t *testing.T) {
 }
 
 func TestParseTimeWindow_InvalidFormat(t *testing.T) {
+	t.Parallel()
 	before := time.Now().UTC()
 	from, to := parseTimeWindow("garbage")
 	after := time.Now().UTC()
@@ -531,6 +549,7 @@ func TestParseTimeWindow_InvalidFormat(t *testing.T) {
 }
 
 func TestParseTimeWindow_PartialInvalid(t *testing.T) {
+	t.Parallel()
 	before := time.Now().UTC()
 	from, to := parseTimeWindow("2024-01-15T10:00:00Z/garbage")
 	after := time.Now().UTC()
@@ -547,6 +566,7 @@ func TestParseTimeWindow_PartialInvalid(t *testing.T) {
 // --- resolveWorkload tests ---
 
 func TestResolveWorkload_ServiceLabel(t *testing.T) {
+	t.Parallel()
 	alert := contracts.NormalizedAlert{
 		ID: "a1",
 		Labels: map[string]string{
@@ -561,6 +581,7 @@ func TestResolveWorkload_ServiceLabel(t *testing.T) {
 }
 
 func TestResolveWorkload_AppLabel(t *testing.T) {
+	t.Parallel()
 	alert := contracts.NormalizedAlert{
 		ID: "a2",
 		Labels: map[string]string{
@@ -574,6 +595,7 @@ func TestResolveWorkload_AppLabel(t *testing.T) {
 }
 
 func TestResolveWorkload_NoLabel(t *testing.T) {
+	t.Parallel()
 	alert := contracts.NormalizedAlert{
 		ID:     "a3",
 		Labels: map[string]string{},

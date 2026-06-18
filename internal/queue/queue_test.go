@@ -7,6 +7,7 @@ import (
 )
 
 func TestNew_InvalidURL(t *testing.T) {
+	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -17,6 +18,7 @@ func TestNew_InvalidURL(t *testing.T) {
 }
 
 func TestSanitizeDurable(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  string
@@ -56,6 +58,7 @@ func TestSanitizeDurable(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := sanitizeDurable(tc.input)
 			if got != tc.expect {
 				t.Errorf("sanitizeDurable(%q) = %q, want %q", tc.input, got, tc.expect)
@@ -65,9 +68,10 @@ func TestSanitizeDurable(t *testing.T) {
 }
 
 func TestQueue_MethodsExist(t *testing.T) {
+	t.Parallel()
 	var _ interface {
 		Publish(ctx context.Context, subject string, data []byte) error
-		Subscribe(ctx context.Context, subject string, handler func(msg []byte) error) error
+		Subscribe(ctx context.Context, subject string, handler func(msg []byte, ack func(), nak func()) error) error
 		Close()
 	} = (*Queue)(nil)
 }

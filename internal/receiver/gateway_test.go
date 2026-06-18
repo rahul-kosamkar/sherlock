@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.uber.org/zap"
 
 	"github.com/rahulkosamkar/sherlock/internal/contracts"
@@ -17,6 +20,7 @@ import (
 // --- mocks ---
 
 type mockPublisher struct {
+	mu        sync.Mutex
 	published []struct {
 		subject string
 		data    []byte
@@ -28,6 +32,8 @@ func (m *mockPublisher) Publish(_ context.Context, subject string, data []byte) 
 	if m.err != nil {
 		return m.err
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.published = append(m.published, struct {
 		subject string
 		data    []byte
@@ -36,6 +42,7 @@ func (m *mockPublisher) Publish(_ context.Context, subject string, data []byte) 
 }
 
 type mockBlobStore struct {
+	mu     sync.Mutex
 	stored []struct {
 		key  string
 		data []byte
@@ -47,6 +54,8 @@ func (m *mockBlobStore) PutRawPayload(_ context.Context, key string, data []byte
 	if m.err != nil {
 		return m.err
 	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.stored = append(m.stored, struct {
 		key  string
 		data []byte
@@ -168,7 +177,7 @@ func TestGateway_PublishesAlerts(t *testing.T) {
 		if msg.subject != "INVESTIGATIONS.new" {
 			t.Errorf("published[%d]: expected subject %q, got %q", i, "INVESTIGATIONS.new", msg.subject)
 		}
-		var job investigationJob
+		var job contracts.InvestigationJob
 		if err := json.Unmarshal(msg.data, &job); err != nil {
 			t.Fatalf("published[%d]: failed to unmarshal: %v", i, err)
 		}
@@ -245,6 +254,7 @@ func TestGateway_Register(t *testing.T) {
 
 	for _, src := range sources {
 		t.Run(src, func(t *testing.T) {
+			t.Parallel()
 			rec := doPost(t, gw, "/webhooks/"+src, `{}`)
 			if rec.Code != http.StatusAccepted {
 				t.Fatalf("expected status %d for source %q, got %d: %s",
@@ -254,11 +264,99 @@ func TestGateway_Register(t *testing.T) {
 	}
 
 	t.Run("unregistered", func(t *testing.T) {
+		t.Parallel()
 		rec := doPost(t, gw, "/webhooks/datadog", `{}`)
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("expected status %d, got %d", http.StatusNotFound, rec.Code)
 		}
 	})
+}
+
+func TestGateway_TraceContextInjection(t *testing.T) {
+	prev := otel.GetTextMapPropagator()
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+	defer otel.SetTextMapPropagator(prev)
+
+	gw, pub, _ := newTestGateway()
+	gw.Register(&mockReceiver{
+		source: "grafana",
+		alerts: []contracts.NormalizedAlert{{Title: "traced alert"}},
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/webhooks/grafana", strings.NewReader(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
+	req.Header.Set("Tracestate", "rojo=00f067aa0ba902b7")
+
+	ctx := otel.GetTextMapPropagator().Extract(req.Context(), propagation.HeaderCarrier(req.Header))
+	req = req.WithContext(ctx)
+
+	rec := httptest.NewRecorder()
+	gw.Routes().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusAccepted, rec.Code, rec.Body.String())
+	}
+	if len(pub.published) != 1 {
+		t.Fatalf("expected 1 published message, got %d", len(pub.published))
+	}
+
+	var job contracts.InvestigationJob
+	if err := json.Unmarshal(pub.published[0].data, &job); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if job.TraceParent == "" {
+		t.Error("expected non-empty TraceParent in published job")
+	}
+	if job.TraceState == "" {
+		t.Error("expected non-empty TraceState in published job")
+	}
+}
+
+func TestGateway_ConcurrentWebhooks(t *testing.T) {
+	gw, pub, _ := newTestGateway()
+	gw.Register(&mockReceiver{
+		source: "grafana",
+		alerts: []contracts.NormalizedAlert{{Title: "concurrent alert"}},
+	})
+
+	const n = 10
+	errs := make(chan int, n)
+	for i := 0; i < n; i++ {
+		go func() {
+			r := doPost(t, gw, "/webhooks/grafana", `{}`)
+			errs <- r.Code
+		}()
+	}
+
+	for i := 0; i < n; i++ {
+		code := <-errs
+		if code != http.StatusAccepted {
+			t.Errorf("request %d: expected %d, got %d", i, http.StatusAccepted, code)
+		}
+	}
+
+	if len(pub.published) != n {
+		t.Errorf("expected %d published messages, got %d", n, len(pub.published))
+	}
+}
+
+func TestGateway_BodySizeLimit(t *testing.T) {
+	gw, _, _ := newTestGateway()
+	gw.Register(&mockReceiver{
+		source:    "grafana",
+		decodeErr: errors.New("should not reach decode"),
+	})
+
+	bigBody := strings.Repeat("x", 2<<20)
+	rec := doPost(t, gw, "/webhooks/grafana", bigBody)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("expected status %d, got %d: %s", http.StatusRequestEntityTooLarge, rec.Code, rec.Body.String())
+	}
 }
 
 func TestGateway_AlertFieldsPopulated(t *testing.T) {
@@ -274,7 +372,7 @@ func TestGateway_AlertFieldsPopulated(t *testing.T) {
 		t.Fatalf("expected 1 published message, got %d", len(pub.published))
 	}
 
-	var job investigationJob
+	var job contracts.InvestigationJob
 	if err := json.Unmarshal(pub.published[0].data, &job); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}

@@ -55,6 +55,7 @@ func (m *mockInvestigationQuerier) GetByID(_ context.Context, _ string) (*contra
 }
 
 func TestNewApp_SocketMode(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode:     "socket",
 		AppToken: "xapp-test",
@@ -70,6 +71,7 @@ func TestNewApp_SocketMode(t *testing.T) {
 }
 
 func TestNewApp_SocketMode_MissingAppToken(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode:     "socket",
 		BotToken: "xoxb-test",
@@ -81,6 +83,7 @@ func TestNewApp_SocketMode_MissingAppToken(t *testing.T) {
 }
 
 func TestNewApp_HTTPMode(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode:          "http",
 		SigningSecret: "secret",
@@ -95,6 +98,7 @@ func TestNewApp_HTTPMode(t *testing.T) {
 }
 
 func TestNewApp_HTTPMode_MissingSigningSecret(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode: "http",
 	}
@@ -105,6 +109,7 @@ func TestNewApp_HTTPMode_MissingSigningSecret(t *testing.T) {
 }
 
 func TestNewApp_BothMode(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode:          "both",
 		AppToken:      "xapp-test",
@@ -121,6 +126,7 @@ func TestNewApp_BothMode(t *testing.T) {
 }
 
 func TestNewApp_BothMode_MissingTokens(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode:          "both",
 		SigningSecret: "secret",
@@ -132,6 +138,7 @@ func TestNewApp_BothMode_MissingTokens(t *testing.T) {
 }
 
 func TestNewApp_BothMode_MissingSigningSecret(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode:     "both",
 		AppToken: "xapp-test",
@@ -144,6 +151,7 @@ func TestNewApp_BothMode_MissingSigningSecret(t *testing.T) {
 }
 
 func TestNewApp_UnknownMode(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode: "unknown",
 	}
@@ -154,6 +162,7 @@ func TestNewApp_UnknownMode(t *testing.T) {
 }
 
 func TestNewApp_HTTPMode_DefaultAddress(t *testing.T) {
+	t.Parallel()
 	cfg := AppConfig{
 		Mode:          "http",
 		SigningSecret: "secret",
@@ -165,6 +174,7 @@ func TestNewApp_HTTPMode_DefaultAddress(t *testing.T) {
 }
 
 func TestHandleSlashCommand_EmptyText(t *testing.T) {
+	t.Parallel()
 	enq := &mockEnqueuer{invID: "inv-123"}
 	app := &App{
 		enqueuer: enq,
@@ -186,6 +196,7 @@ func TestHandleSlashCommand_EmptyText(t *testing.T) {
 }
 
 func TestHandleSlashCommand_Success(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-001"}
 	enq := &mockEnqueuer{invID: "inv-200"}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
@@ -213,6 +224,7 @@ func TestHandleSlashCommand_Success(t *testing.T) {
 }
 
 func TestHandleSlashCommand_EnqueueError(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-001"}
 	enq := &mockEnqueuer{err: errors.New("queue down")}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
@@ -234,6 +246,7 @@ func TestHandleSlashCommand_EnqueueError(t *testing.T) {
 }
 
 func TestHandleSlashCommand_PostStartedError(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{err: errors.New("slack down")}
 	enq := &mockEnqueuer{invID: "inv-300"}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
@@ -255,6 +268,7 @@ func TestHandleSlashCommand_PostStartedError(t *testing.T) {
 }
 
 func TestHandleMessageShortcut_Success(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-002"}
 	enq := &mockEnqueuer{invID: "inv-400"}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
@@ -280,6 +294,7 @@ func TestHandleMessageShortcut_Success(t *testing.T) {
 }
 
 func TestHandleMessageShortcut_EmptyText(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-003"}
 	enq := &mockEnqueuer{invID: "inv-500"}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
@@ -305,6 +320,7 @@ func TestHandleMessageShortcut_EmptyText(t *testing.T) {
 }
 
 func TestHandleMessageShortcut_EnqueueError(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-004"}
 	enq := &mockEnqueuer{err: errors.New("enqueue failed")}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
@@ -327,6 +343,7 @@ func TestHandleMessageShortcut_EnqueueError(t *testing.T) {
 }
 
 func TestHandleInteraction_Rerun_Success(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-005"}
 	enq := &mockEnqueuer{invID: "inv-600"}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
@@ -351,6 +368,7 @@ func TestHandleInteraction_Rerun_Success(t *testing.T) {
 }
 
 func TestHandleInteraction_Rerun_EnqueueError(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-006"}
 	enq := &mockEnqueuer{err: errors.New("rerun failed")}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
@@ -372,6 +390,7 @@ func TestHandleInteraction_Rerun_EnqueueError(t *testing.T) {
 }
 
 func TestHandleInteraction_ExpandEvidence(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-010"}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
 	evq := &mockEvidenceQuerier{evidence: []contracts.Evidence{
@@ -396,6 +415,7 @@ func TestHandleInteraction_ExpandEvidence(t *testing.T) {
 }
 
 func TestHandleInteraction_OpenRunbook(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-011"}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
 	invq := &mockInvestigationQuerier{inv: &contracts.Investigation{
@@ -423,6 +443,7 @@ func TestHandleInteraction_OpenRunbook(t *testing.T) {
 }
 
 func TestHandleInteraction_OpenRunbook_NoRunbookURL(t *testing.T) {
+	t.Parallel()
 	mockAPI := &mockSlackAPI{ts: "thread-ts-012"}
 	pub := &Publisher{slackClient: mockAPI, logger: zap.NewNop()}
 	invq := &mockInvestigationQuerier{inv: &contracts.Investigation{
@@ -450,6 +471,7 @@ func TestHandleInteraction_OpenRunbook_NoRunbookURL(t *testing.T) {
 }
 
 func TestHandleInteraction_UnknownAction(t *testing.T) {
+	t.Parallel()
 	app := &App{logger: zap.NewNop()}
 	err := app.HandleInteraction(context.Background(), transport.InteractionAction{
 		ActionID:  "unknown_action",
@@ -463,6 +485,7 @@ func TestHandleInteraction_UnknownAction(t *testing.T) {
 }
 
 func TestStop_NoTransports(t *testing.T) {
+	t.Parallel()
 	app := &App{logger: zap.NewNop()}
 	err := app.Stop()
 	if err != nil {

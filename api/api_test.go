@@ -71,6 +71,7 @@ func newTestServer(
 }
 
 func TestHealth_ReturnsOK(t *testing.T) {
+	t.Parallel()
 	srv := newTestServer(
 		&mockInvestigationReader{},
 		&mockEvidenceReader{},
@@ -100,6 +101,7 @@ func TestHealth_ReturnsOK(t *testing.T) {
 }
 
 func TestGetInvestigation_Found(t *testing.T) {
+	t.Parallel()
 	inv := &contracts.Investigation{
 		ID:       "inv-1",
 		TenantID: "tenant-1",
@@ -135,8 +137,9 @@ func TestGetInvestigation_Found(t *testing.T) {
 }
 
 func TestGetInvestigation_NotFound(t *testing.T) {
+	t.Parallel()
 	srv := newTestServer(
-		&mockInvestigationReader{err: errors.New("not found")},
+		&mockInvestigationReader{err: contracts.ErrNotFound},
 		&mockEvidenceReader{},
 		&mockTimelineReader{},
 		&mockHypothesisReader{},
@@ -161,6 +164,7 @@ func TestGetInvestigation_NotFound(t *testing.T) {
 }
 
 func TestListEvidence_Success(t *testing.T) {
+	t.Parallel()
 	evidence := []contracts.Evidence{
 		{ID: "e1", InvestigationID: "inv-1", Kind: contracts.EvidenceLog, Source: "datadog"},
 		{ID: "e2", InvestigationID: "inv-1", Kind: contracts.EvidenceMetric, Source: "prometheus"},
@@ -191,6 +195,7 @@ func TestListEvidence_Success(t *testing.T) {
 }
 
 func TestListEvidence_Error(t *testing.T) {
+	t.Parallel()
 	srv := newTestServer(
 		&mockInvestigationReader{},
 		&mockEvidenceReader{err: errors.New("db error")},
@@ -209,6 +214,7 @@ func TestListEvidence_Error(t *testing.T) {
 }
 
 func TestListTimeline_Success(t *testing.T) {
+	t.Parallel()
 	events := []contracts.TimelineEvent{
 		{
 			ID:              "tl-1",
@@ -247,6 +253,7 @@ func TestListTimeline_Success(t *testing.T) {
 }
 
 func TestListTimeline_Error(t *testing.T) {
+	t.Parallel()
 	srv := newTestServer(
 		&mockInvestigationReader{},
 		&mockEvidenceReader{},
@@ -265,6 +272,7 @@ func TestListTimeline_Error(t *testing.T) {
 }
 
 func TestListHypotheses_Success(t *testing.T) {
+	t.Parallel()
 	hypotheses := []contracts.Hypothesis{
 		{
 			ID:            "h-1",
@@ -302,6 +310,7 @@ func TestListHypotheses_Success(t *testing.T) {
 }
 
 func TestListHypotheses_Error(t *testing.T) {
+	t.Parallel()
 	srv := newTestServer(
 		&mockInvestigationReader{},
 		&mockEvidenceReader{},

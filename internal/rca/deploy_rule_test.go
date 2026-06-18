@@ -10,6 +10,7 @@ import (
 )
 
 func TestDeployProximityRule_Name(t *testing.T) {
+	t.Parallel()
 	r := &DeployProximityRule{}
 	if got := r.Name(); got != "deploy_proximity" {
 		t.Errorf("Name() = %q, want %q", got, "deploy_proximity")
@@ -17,6 +18,7 @@ func TestDeployProximityRule_Name(t *testing.T) {
 }
 
 func TestDeployProximityRule_NoDeployEvidence(t *testing.T) {
+	t.Parallel()
 	graph := contracts.InvestigationGraph{
 		Data: contracts.InvestigationData{
 			Alerts: []contracts.NormalizedAlert{
@@ -36,6 +38,7 @@ func TestDeployProximityRule_NoDeployEvidence(t *testing.T) {
 }
 
 func TestDeployProximityRule_Within30Minutes(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-20 * time.Minute)
 
@@ -75,6 +78,7 @@ func TestDeployProximityRule_Within30Minutes(t *testing.T) {
 }
 
 func TestDeployProximityRule_Within1Hour(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-45 * time.Minute)
 
@@ -111,6 +115,7 @@ func TestDeployProximityRule_Within1Hour(t *testing.T) {
 }
 
 func TestDeployProximityRule_BeyondWindow_NoHypothesis(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-3 * time.Hour)
 
@@ -142,6 +147,7 @@ func TestDeployProximityRule_BeyondWindow_NoHypothesis(t *testing.T) {
 }
 
 func TestDeployProximityRule_ConfidenceBoost_LargeDiff(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-20 * time.Minute)
 
@@ -188,6 +194,7 @@ func TestDeployProximityRule_ConfidenceBoost_LargeDiff(t *testing.T) {
 }
 
 func TestDeployProximityRule_ConfidenceBoost_ErrorLogs(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-20 * time.Minute)
 
@@ -232,6 +239,7 @@ func TestDeployProximityRule_ConfidenceBoost_ErrorLogs(t *testing.T) {
 }
 
 func TestDeployProximityRule_Narrative_IncludesSHAAndEnvironment(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-15 * time.Minute)
 
@@ -274,6 +282,7 @@ func TestDeployProximityRule_Narrative_IncludesSHAAndEnvironment(t *testing.T) {
 }
 
 func TestDeployProximityRule_SuggestedFixes(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-10 * time.Minute)
 
@@ -326,6 +335,7 @@ func TestDeployProximityRule_SuggestedFixes(t *testing.T) {
 }
 
 func TestDeployProximityRule_ConfidenceCappedAt095(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-10 * time.Minute)
 
@@ -386,6 +396,7 @@ func TestDeployProximityRule_ConfidenceCappedAt095(t *testing.T) {
 }
 
 func TestWithinWindow(t *testing.T) {
+	t.Parallel()
 	base := time.Now()
 
 	tests := []struct {
@@ -403,6 +414,7 @@ func TestWithinWindow(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := withinWindow(tt.t1, tt.t2, tt.window)
 			if got != tt.want {
 				t.Errorf("withinWindow() = %v, want %v", got, tt.want)

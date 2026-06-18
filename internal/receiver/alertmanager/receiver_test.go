@@ -20,8 +20,9 @@ func loadFixture(t *testing.T, name string) []byte {
 }
 
 func TestDecode_FiringAlert(t *testing.T) {
+	t.Parallel()
 	body := loadFixture(t, "alert_firing.json")
-	r := alertmanager.New()
+	r := alertmanager.New("")
 
 	alerts, err := r.Decode(context.Background(), nil, body)
 	if err != nil {
@@ -68,9 +69,30 @@ func TestDecode_FiringAlert(t *testing.T) {
 	}
 }
 
-func TestVerify_AlwaysPasses(t *testing.T) {
-	r := alertmanager.New()
+func TestVerify_NoSecret(t *testing.T) {
+	t.Parallel()
+	r := alertmanager.New("")
 	if err := r.Verify(context.Background(), nil, nil); err != nil {
-		t.Fatalf("Verify() should always return nil, got: %v", err)
+		t.Fatalf("Verify() with empty secret should return nil, got: %v", err)
+	}
+}
+
+func TestVerify_ValidSecret(t *testing.T) {
+	t.Parallel()
+	r := alertmanager.New("my-secret")
+	h := make(map[string][]string)
+	h["Authorization"] = []string{"Bearer my-secret"}
+	if err := r.Verify(context.Background(), h, nil); err != nil {
+		t.Fatalf("Verify() with valid secret should return nil, got: %v", err)
+	}
+}
+
+func TestVerify_InvalidSecret(t *testing.T) {
+	t.Parallel()
+	r := alertmanager.New("my-secret")
+	h := make(map[string][]string)
+	h["Authorization"] = []string{"Bearer wrong-secret"}
+	if err := r.Verify(context.Background(), h, nil); err == nil {
+		t.Fatal("Verify() with invalid secret should return error")
 	}
 }

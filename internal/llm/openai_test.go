@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +25,7 @@ func newOpenAITestProvider(url string) *OpenAIProvider {
 }
 
 func TestOpenAI_Complete_Success(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := map[string]any{
 			"choices": []map[string]any{
@@ -66,6 +68,7 @@ func TestOpenAI_Complete_Success(t *testing.T) {
 }
 
 func TestOpenAI_Complete_RateLimit(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write([]byte(`{"error":"rate limited"}`))
@@ -77,12 +80,20 @@ func TestOpenAI_Complete_RateLimit(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !strings.Contains(err.Error(), "rate limited") {
-		t.Errorf("error = %q, want it to contain %q", err.Error(), "rate limited")
+	var llmErr *LLMError
+	if !errors.As(err, &llmErr) {
+		t.Fatalf("expected *LLMError, got %T: %v", err, err)
+	}
+	if llmErr.StatusCode != 429 {
+		t.Errorf("StatusCode = %d, want 429", llmErr.StatusCode)
+	}
+	if !llmErr.Retryable {
+		t.Error("expected Retryable to be true for 429")
 	}
 }
 
 func TestOpenAI_Complete_ServerError(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`internal server error`))
@@ -103,6 +114,7 @@ func TestOpenAI_Complete_ServerError(t *testing.T) {
 }
 
 func TestOpenAI_Complete_EmptyChoices(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"choices":[],"usage":{},"model":"gpt-4"}`))
@@ -120,6 +132,7 @@ func TestOpenAI_Complete_EmptyChoices(t *testing.T) {
 }
 
 func TestOpenAI_Complete_InvalidJSON(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{not valid json`))
@@ -137,6 +150,7 @@ func TestOpenAI_Complete_InvalidJSON(t *testing.T) {
 }
 
 func TestOpenAI_Complete_SystemPromptOmitted(t *testing.T) {
+	t.Parallel()
 	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -177,6 +191,7 @@ func TestOpenAI_Complete_SystemPromptOmitted(t *testing.T) {
 }
 
 func TestOpenAI_Complete_CustomEndpoint(t *testing.T) {
+	t.Parallel()
 	var requestReceived bool
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestReceived = true
@@ -209,6 +224,7 @@ func TestOpenAI_Complete_CustomEndpoint(t *testing.T) {
 }
 
 func TestOpenAI_Complete_Timeout(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(3 * time.Second)
 		w.Write([]byte(`{}`))

@@ -18,6 +18,7 @@ func graphWithEvidence(evidence []contracts.Evidence) contracts.InvestigationGra
 // ---------------------------------------------------------------------------
 
 func TestCrashLoopRule_Name(t *testing.T) {
+	t.Parallel()
 	r := &CrashLoopRule{}
 	if got := r.Name(); got != "crash_loop" {
 		t.Errorf("Name() = %q, want %q", got, "crash_loop")
@@ -25,6 +26,7 @@ func TestCrashLoopRule_Name(t *testing.T) {
 }
 
 func TestCrashLoopRule_Detected(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Pod in CrashLoopBackOff"},
 	})
@@ -50,6 +52,7 @@ func TestCrashLoopRule_Detected(t *testing.T) {
 }
 
 func TestCrashLoopRule_WithDeploy(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Pod in CrashLoopBackOff"},
 		{ID: "ev-2", Kind: contracts.EvidenceDeploy, Source: "argocd", Summary: "Deployment v1.2.3 rolled out"},
@@ -73,6 +76,7 @@ func TestCrashLoopRule_WithDeploy(t *testing.T) {
 }
 
 func TestCrashLoopRule_RestartKeyword(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Pod restart count: 5"},
 	})
@@ -87,6 +91,7 @@ func TestCrashLoopRule_RestartKeyword(t *testing.T) {
 }
 
 func TestCrashLoopRule_NoMatch(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Pod running normally"},
 	})
@@ -98,6 +103,7 @@ func TestCrashLoopRule_NoMatch(t *testing.T) {
 }
 
 func TestCrashLoopRule_NoK8sEvidence(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki", Summary: "CrashLoopBackOff in logs"},
 	})
@@ -113,6 +119,7 @@ func TestCrashLoopRule_NoK8sEvidence(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestOOMKilledRule_Name(t *testing.T) {
+	t.Parallel()
 	r := &OOMKilledRule{}
 	if got := r.Name(); got != "oom_killed" {
 		t.Errorf("Name() = %q, want %q", got, "oom_killed")
@@ -120,6 +127,7 @@ func TestOOMKilledRule_Name(t *testing.T) {
 }
 
 func TestOOMKilledRule_Detected(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Container OOMKilled"},
 	})
@@ -142,6 +150,7 @@ func TestOOMKilledRule_Detected(t *testing.T) {
 }
 
 func TestOOMKilledRule_WithMemoryMetrics(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Container OOMKilled"},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric, Source: "prometheus", Summary: "memory utilization spike", Score: 0.9},
@@ -165,6 +174,7 @@ func TestOOMKilledRule_WithMemoryMetrics(t *testing.T) {
 }
 
 func TestOOMKilledRule_NoMemoryMetrics(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Container OOMKilled"},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric, Source: "prometheus", Summary: "memory utilization", Score: 0.3},
@@ -180,6 +190,7 @@ func TestOOMKilledRule_NoMemoryMetrics(t *testing.T) {
 }
 
 func TestOOMKilledRule_NoMatch(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Pod running healthy"},
 	})
@@ -195,6 +206,7 @@ func TestOOMKilledRule_NoMatch(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestHighCPURule_Name(t *testing.T) {
+	t.Parallel()
 	r := &HighCPURule{}
 	if got := r.Name(); got != "high_cpu" {
 		t.Errorf("Name() = %q, want %q", got, "high_cpu")
@@ -202,6 +214,7 @@ func TestHighCPURule_Name(t *testing.T) {
 }
 
 func TestHighCPURule_WithDeploy(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceMetric, Source: "prometheus", Summary: "cpu utilization anomaly", Score: 0.8},
 		{ID: "ev-2", Kind: contracts.EvidenceDeploy, Source: "argocd", Summary: "Deployment v2.0.0"},
@@ -225,6 +238,7 @@ func TestHighCPURule_WithDeploy(t *testing.T) {
 }
 
 func TestHighCPURule_WithTraffic(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceMetric, Source: "prometheus", Summary: "cpu utilization anomaly", Score: 0.8},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric, Source: "prometheus", Summary: "traffic rate increase", Score: 0.6},
@@ -248,6 +262,7 @@ func TestHighCPURule_WithTraffic(t *testing.T) {
 }
 
 func TestHighCPURule_NoCorrelation(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceMetric, Source: "prometheus", Summary: "cpu utilization anomaly", Score: 0.8},
 	})
@@ -270,6 +285,7 @@ func TestHighCPURule_NoCorrelation(t *testing.T) {
 }
 
 func TestHighCPURule_LowScore(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceMetric, Source: "prometheus", Summary: "cpu utilization", Score: 0.3},
 	})
@@ -281,6 +297,7 @@ func TestHighCPURule_LowScore(t *testing.T) {
 }
 
 func TestHighCPURule_NoMetrics(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki", Summary: "high cpu usage in logs"},
 	})
@@ -296,6 +313,7 @@ func TestHighCPURule_NoMetrics(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestErrorSpikeRule_Name(t *testing.T) {
+	t.Parallel()
 	r := &ErrorSpikeRule{}
 	if got := r.Name(); got != "error_spike" {
 		t.Errorf("Name() = %q, want %q", got, "error_spike")
@@ -303,6 +321,7 @@ func TestErrorSpikeRule_Name(t *testing.T) {
 }
 
 func TestErrorSpikeRule_Detected(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki", Summary: "error: nil pointer", Score: 0.8},
 		{ID: "ev-2", Kind: contracts.EvidenceLog, Source: "loki", Summary: "error: timeout", Score: 0.7},
@@ -328,6 +347,7 @@ func TestErrorSpikeRule_Detected(t *testing.T) {
 }
 
 func TestErrorSpikeRule_WithDeploy(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki", Summary: "error: nil pointer", Score: 0.8},
 		{ID: "ev-2", Kind: contracts.EvidenceLog, Source: "loki", Summary: "error: timeout", Score: 0.7},
@@ -350,6 +370,7 @@ func TestErrorSpikeRule_WithDeploy(t *testing.T) {
 }
 
 func TestErrorSpikeRule_TooFewErrors(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki", Summary: "error: nil pointer", Score: 0.8},
 		{ID: "ev-2", Kind: contracts.EvidenceLog, Source: "loki", Summary: "error: timeout", Score: 0.7},
@@ -362,6 +383,7 @@ func TestErrorSpikeRule_TooFewErrors(t *testing.T) {
 }
 
 func TestErrorSpikeRule_LowScoreLogs(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki", Summary: "error: nil pointer", Score: 0.2},
 		{ID: "ev-2", Kind: contracts.EvidenceLog, Source: "loki", Summary: "error: timeout", Score: 0.3},
@@ -380,6 +402,7 @@ func TestErrorSpikeRule_LowScoreLogs(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestSchedulingFailureRule_Name(t *testing.T) {
+	t.Parallel()
 	r := &SchedulingFailureRule{}
 	if got := r.Name(); got != "scheduling_failure" {
 		t.Errorf("Name() = %q, want %q", got, "scheduling_failure")
@@ -387,6 +410,7 @@ func TestSchedulingFailureRule_Name(t *testing.T) {
 }
 
 func TestSchedulingFailureRule_FailedScheduling(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceEvent, Source: "kubernetes", Summary: "FailedScheduling: insufficient cpu"},
 	})
@@ -406,6 +430,7 @@ func TestSchedulingFailureRule_FailedScheduling(t *testing.T) {
 }
 
 func TestSchedulingFailureRule_Evicted(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Pod Evicted due to node pressure"},
 	})
@@ -420,6 +445,7 @@ func TestSchedulingFailureRule_Evicted(t *testing.T) {
 }
 
 func TestSchedulingFailureRule_NodeNotReady(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceEvent, Source: "kubernetes", Summary: "NodeNotReady condition on node-3"},
 	})
@@ -434,6 +460,7 @@ func TestSchedulingFailureRule_NodeNotReady(t *testing.T) {
 }
 
 func TestSchedulingFailureRule_NoMatch(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceEvent, Source: "kubernetes", Summary: "Scheduled successfully on node-1"},
 		{ID: "ev-2", Kind: contracts.EvidenceEvent, Source: "kubernetes", Summary: "Pulled image nginx:latest"},
@@ -450,6 +477,7 @@ func TestSchedulingFailureRule_NoMatch(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestFindEvidenceByKind(t *testing.T) {
+	t.Parallel()
 	evidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric},
@@ -459,6 +487,7 @@ func TestFindEvidenceByKind(t *testing.T) {
 	}
 
 	t.Run("filters logs", func(t *testing.T) {
+		t.Parallel()
 		got := findEvidenceByKind(evidence, contracts.EvidenceLog)
 		if len(got) != 3 {
 			t.Errorf("findEvidenceByKind(Log) returned %d items, want 3", len(got))
@@ -466,6 +495,7 @@ func TestFindEvidenceByKind(t *testing.T) {
 	})
 
 	t.Run("filters metrics", func(t *testing.T) {
+		t.Parallel()
 		got := findEvidenceByKind(evidence, contracts.EvidenceMetric)
 		if len(got) != 1 {
 			t.Errorf("findEvidenceByKind(Metric) returned %d items, want 1", len(got))
@@ -473,6 +503,7 @@ func TestFindEvidenceByKind(t *testing.T) {
 	})
 
 	t.Run("returns empty for missing kind", func(t *testing.T) {
+		t.Parallel()
 		got := findEvidenceByKind(evidence, contracts.EvidenceDeploy)
 		if len(got) != 0 {
 			t.Errorf("findEvidenceByKind(Deploy) returned %d items, want 0", len(got))
@@ -481,6 +512,7 @@ func TestFindEvidenceByKind(t *testing.T) {
 }
 
 func TestEvidenceContains_InSummary(t *testing.T) {
+	t.Parallel()
 	e := contracts.Evidence{Summary: "Container OOMKilled with exit code 137"}
 	if !evidenceContains(e, "OOMKilled") {
 		t.Error("evidenceContains should find term in Summary")
@@ -488,6 +520,7 @@ func TestEvidenceContains_InSummary(t *testing.T) {
 }
 
 func TestEvidenceContains_InAttributes(t *testing.T) {
+	t.Parallel()
 	e := contracts.Evidence{
 		Summary:    "pod status changed",
 		Attributes: map[string]string{"reason": "CrashLoopBackOff", "container": "api"},
@@ -498,6 +531,7 @@ func TestEvidenceContains_InAttributes(t *testing.T) {
 }
 
 func TestEvidenceContains_CaseInsensitive(t *testing.T) {
+	t.Parallel()
 	e := contracts.Evidence{Summary: "Container OOMKilled"}
 	if !evidenceContains(e, "oomkilled") {
 		t.Error("evidenceContains should match case-insensitively")
@@ -505,6 +539,7 @@ func TestEvidenceContains_CaseInsensitive(t *testing.T) {
 }
 
 func TestEvidenceContains_NotFound(t *testing.T) {
+	t.Parallel()
 	e := contracts.Evidence{
 		Summary:    "Pod running normally",
 		Attributes: map[string]string{"status": "healthy"},
@@ -515,6 +550,7 @@ func TestEvidenceContains_NotFound(t *testing.T) {
 }
 
 func TestEvidenceIDs(t *testing.T) {
+	t.Parallel()
 	evidence := []contracts.Evidence{
 		{ID: "ev-1"},
 		{ID: "ev-2"},
@@ -536,6 +572,7 @@ func TestEvidenceIDs(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestEngine_Name(t *testing.T) {
+	t.Parallel()
 	e := New()
 	if got := e.Name(); got != "rule-based" {
 		t.Errorf("Name() = %q, want %q", got, "rule-based")
@@ -543,6 +580,7 @@ func TestEngine_Name(t *testing.T) {
 }
 
 func TestEngine_Rank_MultipleFires(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-crash", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Pod in CrashLoopBackOff"},
 		{ID: "ev-oom", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Container OOMKilled"},
@@ -570,6 +608,7 @@ func TestEngine_Rank_MultipleFires(t *testing.T) {
 }
 
 func TestEngine_Rank_NoEvidence(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence(nil)
 
 	e := New()
@@ -583,6 +622,7 @@ func TestEngine_Rank_NoEvidence(t *testing.T) {
 }
 
 func TestEngine_Rank_MaxFive(t *testing.T) {
+	t.Parallel()
 	graph := graphWithEvidence([]contracts.Evidence{
 		{ID: "ev-crash", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Pod in CrashLoopBackOff"},
 		{ID: "ev-oom", Kind: contracts.EvidenceK8sState, Source: "kubernetes", Summary: "Container OOMKilled"},

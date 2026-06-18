@@ -3,6 +3,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +25,7 @@ func newAnthropicTestProvider(url string) *AnthropicProvider {
 }
 
 func TestAnthropic_Complete_Success(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		resp := map[string]any{
 			"content": []map[string]string{
@@ -63,6 +65,7 @@ func TestAnthropic_Complete_Success(t *testing.T) {
 }
 
 func TestAnthropic_Complete_WithSystemPrompt(t *testing.T) {
+	t.Parallel()
 	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +102,7 @@ func TestAnthropic_Complete_WithSystemPrompt(t *testing.T) {
 }
 
 func TestAnthropic_Complete_NoSystemPrompt(t *testing.T) {
+	t.Parallel()
 	var receivedBody map[string]any
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +135,7 @@ func TestAnthropic_Complete_NoSystemPrompt(t *testing.T) {
 }
 
 func TestAnthropic_Complete_RateLimit(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write([]byte(`{"error":"rate limited"}`))
@@ -142,12 +147,20 @@ func TestAnthropic_Complete_RateLimit(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if !strings.Contains(err.Error(), "rate limited") {
-		t.Errorf("error = %q, want it to contain %q", err.Error(), "rate limited")
+	var llmErr *LLMError
+	if !errors.As(err, &llmErr) {
+		t.Fatalf("expected *LLMError, got %T: %v", err, err)
+	}
+	if llmErr.StatusCode != 429 {
+		t.Errorf("StatusCode = %d, want 429", llmErr.StatusCode)
+	}
+	if !llmErr.Retryable {
+		t.Error("expected Retryable to be true for 429")
 	}
 }
 
 func TestAnthropic_Complete_ServerError(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`server overloaded`))
@@ -168,6 +181,7 @@ func TestAnthropic_Complete_ServerError(t *testing.T) {
 }
 
 func TestAnthropic_Complete_EmptyContent(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"content":[],"usage":{},"model":"claude-3-sonnet"}`))
@@ -185,6 +199,7 @@ func TestAnthropic_Complete_EmptyContent(t *testing.T) {
 }
 
 func TestAnthropic_Complete_Headers(t *testing.T) {
+	t.Parallel()
 	var gotAPIKey, gotVersion string
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

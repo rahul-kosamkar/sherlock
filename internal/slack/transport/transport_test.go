@@ -77,6 +77,7 @@ func newTestTransport(h Handler) (*HTTPTransport, string) {
 }
 
 func TestVerifySlackSignature_Valid(t *testing.T) {
+	t.Parallel()
 	signingSecret := "test-secret-1234"
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	body := []byte("command=/sherlock&text=test")
@@ -92,6 +93,7 @@ func TestVerifySlackSignature_Valid(t *testing.T) {
 }
 
 func TestVerifySlackSignature_InvalidSignature(t *testing.T) {
+	t.Parallel()
 	ts := strconv.FormatInt(time.Now().Unix(), 10)
 	if verifySlackSignature("secret", ts, []byte("body"), "v0=invalidhex1234567890") {
 		t.Error("expected invalid signature to return false")
@@ -99,12 +101,14 @@ func TestVerifySlackSignature_InvalidSignature(t *testing.T) {
 }
 
 func TestVerifySlackSignature_InvalidTimestamp(t *testing.T) {
+	t.Parallel()
 	if verifySlackSignature("secret", "not-a-number", []byte("body"), "v0=abc") {
 		t.Error("expected non-numeric timestamp to return false")
 	}
 }
 
 func TestVerifySlackSignature_ExpiredTimestamp(t *testing.T) {
+	t.Parallel()
 	expired := strconv.FormatInt(time.Now().Add(-10*time.Minute).Unix(), 10)
 	body := []byte("body")
 	sig := signRequest("secret", expired, body)
@@ -114,6 +118,7 @@ func TestVerifySlackSignature_ExpiredTimestamp(t *testing.T) {
 }
 
 func TestVerifySlackSignature_WrongSecret(t *testing.T) {
+	t.Parallel()
 	ts := strconv.FormatInt(time.Now().Unix(), 10)
 	body := []byte("body")
 	sig := signRequest("wrong-secret", ts, body)
@@ -123,6 +128,7 @@ func TestVerifySlackSignature_WrongSecret(t *testing.T) {
 }
 
 func TestHTTPTransport_OAuthCallback(t *testing.T) {
+	t.Parallel()
 	tr, _ := newTestTransport(&mockHandler{})
 
 	req := httptest.NewRequest(http.MethodGet, "/slack/oauth/callback", nil)
@@ -138,6 +144,7 @@ func TestHTTPTransport_OAuthCallback(t *testing.T) {
 }
 
 func TestHTTPTransport_SlashCommand_InvalidSignature(t *testing.T) {
+	t.Parallel()
 	tr, _ := newTestTransport(&mockHandler{})
 
 	req := httptest.NewRequest(http.MethodPost, "/slack/commands", strings.NewReader("command=/sherlock"))
@@ -154,6 +161,7 @@ func TestHTTPTransport_SlashCommand_InvalidSignature(t *testing.T) {
 }
 
 func TestHTTPTransport_Interaction_InvalidSignature(t *testing.T) {
+	t.Parallel()
 	tr, _ := newTestTransport(&mockHandler{})
 
 	req := httptest.NewRequest(http.MethodPost, "/slack/interactions", strings.NewReader("payload={}"))
@@ -170,6 +178,7 @@ func TestHTTPTransport_Interaction_InvalidSignature(t *testing.T) {
 }
 
 func TestHTTPTransport_SlashCommand_ValidRequest(t *testing.T) {
+	t.Parallel()
 	h := &mockHandler{}
 	tr, secret := newTestTransport(h)
 
@@ -196,6 +205,7 @@ func TestHTTPTransport_SlashCommand_ValidRequest(t *testing.T) {
 }
 
 func TestHTTPTransport_Interaction_BlockActions(t *testing.T) {
+	t.Parallel()
 	h := &mockHandler{}
 	tr, secret := newTestTransport(h)
 
@@ -219,6 +229,7 @@ func TestHTTPTransport_Interaction_BlockActions(t *testing.T) {
 }
 
 func TestHTTPTransport_Interaction_MessageAction(t *testing.T) {
+	t.Parallel()
 	h := &mockHandler{}
 	tr, secret := newTestTransport(h)
 
@@ -247,6 +258,7 @@ func TestHTTPTransport_Interaction_MessageAction(t *testing.T) {
 }
 
 func TestHTTPTransport_Interaction_UnknownType(t *testing.T) {
+	t.Parallel()
 	h := &mockHandler{}
 	tr, secret := newTestTransport(h)
 
@@ -270,6 +282,7 @@ func TestHTTPTransport_Interaction_UnknownType(t *testing.T) {
 }
 
 func TestHTTPTransport_Interaction_MissingPayload(t *testing.T) {
+	t.Parallel()
 	tr, secret := newTestTransport(&mockHandler{})
 
 	body := ""
@@ -290,6 +303,7 @@ func TestHTTPTransport_Interaction_MissingPayload(t *testing.T) {
 }
 
 func TestHTTPTransport_Interaction_InvalidPayloadJSON(t *testing.T) {
+	t.Parallel()
 	tr, secret := newTestTransport(&mockHandler{})
 
 	formData := url.Values{"payload": {"not-valid-json{"}}
@@ -311,6 +325,7 @@ func TestHTTPTransport_Interaction_InvalidPayloadJSON(t *testing.T) {
 }
 
 func TestNewHTTPTransport_CreatesRouter(t *testing.T) {
+	t.Parallel()
 	h := &mockHandler{}
 	tr := NewHTTPTransport(":3001", "secret", h, zap.NewNop())
 	if tr.router == nil {

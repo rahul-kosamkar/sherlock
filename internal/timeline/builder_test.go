@@ -8,6 +8,7 @@ import (
 )
 
 func TestBuilder_Build_AlertEvents(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -26,6 +27,7 @@ func TestBuilder_Build_AlertEvents(t *testing.T) {
 }
 
 func TestBuilder_Build_K8sEvidence(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -44,6 +46,7 @@ func TestBuilder_Build_K8sEvidence(t *testing.T) {
 }
 
 func TestBuilder_Build_MetricEvidence_HighScore(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -61,6 +64,7 @@ func TestBuilder_Build_MetricEvidence_HighScore(t *testing.T) {
 }
 
 func TestBuilder_Build_MetricEvidence_LowScore(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -78,6 +82,7 @@ func TestBuilder_Build_MetricEvidence_LowScore(t *testing.T) {
 }
 
 func TestBuilder_Build_LogEvidence_HighScore(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -95,6 +100,7 @@ func TestBuilder_Build_LogEvidence_HighScore(t *testing.T) {
 }
 
 func TestBuilder_Build_LogEvidence_LowScore(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -112,6 +118,7 @@ func TestBuilder_Build_LogEvidence_LowScore(t *testing.T) {
 }
 
 func TestBuilder_Build_DeployEvidence(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -129,6 +136,7 @@ func TestBuilder_Build_DeployEvidence(t *testing.T) {
 }
 
 func TestBuilder_Build_SortedByTimestamp(t *testing.T) {
+	t.Parallel()
 	t3 := time.Date(2025, 1, 1, 15, 0, 0, 0, time.UTC)
 	t1 := time.Date(2025, 1, 1, 10, 0, 0, 0, time.UTC)
 	t2 := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
@@ -153,6 +161,7 @@ func TestBuilder_Build_SortedByTimestamp(t *testing.T) {
 }
 
 func TestBuilder_Build_AssignsIDs(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -174,6 +183,7 @@ func TestBuilder_Build_AssignsIDs(t *testing.T) {
 }
 
 func TestBuilder_Build_AssignsInvestigationID(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-42"},
@@ -192,6 +202,7 @@ func TestBuilder_Build_AssignsInvestigationID(t *testing.T) {
 }
 
 func TestBuilder_Build_EmptyData(t *testing.T) {
+	t.Parallel()
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
 	}
@@ -204,6 +215,7 @@ func TestBuilder_Build_EmptyData(t *testing.T) {
 }
 
 func TestBuilder_Build_PreservesAttributes(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	attrs := map[string]string{"region": "us-east-1", "severity": "critical"}
 	data := contracts.InvestigationData{
@@ -226,6 +238,7 @@ func TestBuilder_Build_PreservesAttributes(t *testing.T) {
 }
 
 func TestBuilder_Build_PreservesSource(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},
@@ -245,6 +258,7 @@ func TestBuilder_Build_PreservesSource(t *testing.T) {
 }
 
 func TestBuilder_Build_MixedEvidence(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	data := contracts.InvestigationData{
 		Investigation: contracts.Investigation{ID: "inv-1"},

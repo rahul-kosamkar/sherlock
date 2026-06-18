@@ -11,13 +11,13 @@ import (
 )
 
 type mockLookup struct {
-	findResult *ActiveInvestigation
+	findResult *contracts.ActiveInvestigation
 	findErr    error
 	linkCalled bool
 	linkErr    error
 }
 
-func (m *mockLookup) FindActiveByFingerprint(_ context.Context, _ string, _ time.Time) (*ActiveInvestigation, error) {
+func (m *mockLookup) FindActiveByFingerprint(_ context.Context, _ string, _ time.Time) (*contracts.ActiveInvestigation, error) {
 	return m.findResult, m.findErr
 }
 
@@ -27,6 +27,7 @@ func (m *mockLookup) LinkAlertToInvestigation(_ context.Context, _, _ string) er
 }
 
 func TestNew_CreatesServiceWithCorrectWindow(t *testing.T) {
+	t.Parallel()
 	window := 30 * time.Minute
 	svc := New(&mockLookup{}, window, zap.NewNop())
 	if svc == nil {
@@ -38,6 +39,7 @@ func TestNew_CreatesServiceWithCorrectWindow(t *testing.T) {
 }
 
 func TestCheck_EmptyFingerprint_NotDuplicate(t *testing.T) {
+	t.Parallel()
 	svc := New(&mockLookup{}, time.Hour, zap.NewNop())
 	alert := contracts.NormalizedAlert{
 		ID:          "alert-1",
@@ -54,6 +56,7 @@ func TestCheck_EmptyFingerprint_NotDuplicate(t *testing.T) {
 }
 
 func TestCheck_NoActiveInvestigation_NotDuplicate(t *testing.T) {
+	t.Parallel()
 	mock := &mockLookup{findResult: nil, findErr: nil}
 	svc := New(mock, time.Hour, zap.NewNop())
 	alert := contracts.NormalizedAlert{
@@ -71,7 +74,8 @@ func TestCheck_NoActiveInvestigation_NotDuplicate(t *testing.T) {
 }
 
 func TestCheck_ActiveInvestigationFound_IsDuplicate(t *testing.T) {
-	existing := &ActiveInvestigation{
+	t.Parallel()
+	existing := &contracts.ActiveInvestigation{
 		ID:             "inv-1",
 		Status:         "collecting",
 		Headline:       "Payment failures",
@@ -110,6 +114,7 @@ func TestCheck_ActiveInvestigationFound_IsDuplicate(t *testing.T) {
 }
 
 func TestCheck_StoreError_ReturnsError(t *testing.T) {
+	t.Parallel()
 	mock := &mockLookup{findResult: nil, findErr: fmt.Errorf("database connection failed")}
 	svc := New(mock, time.Hour, zap.NewNop())
 	alert := contracts.NormalizedAlert{
@@ -124,7 +129,8 @@ func TestCheck_StoreError_ReturnsError(t *testing.T) {
 }
 
 func TestCheck_LinkError_StillReturnsDuplicate(t *testing.T) {
-	existing := &ActiveInvestigation{
+	t.Parallel()
+	existing := &contracts.ActiveInvestigation{
 		ID:             "inv-1",
 		Status:         "collecting",
 		Headline:       "Test",

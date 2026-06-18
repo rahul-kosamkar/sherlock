@@ -14,6 +14,7 @@ import (
 )
 
 func TestSource(t *testing.T) {
+	t.Parallel()
 	r := New("secret")
 	if got := r.Source(); got != "github" {
 		t.Errorf("Source() = %q, want %q", got, "github")
@@ -21,6 +22,7 @@ func TestSource(t *testing.T) {
 }
 
 func TestVerify_ValidSignature(t *testing.T) {
+	t.Parallel()
 	secret := "my-webhook-secret"
 	body := []byte(`{"action":"created"}`)
 
@@ -38,6 +40,7 @@ func TestVerify_ValidSignature(t *testing.T) {
 }
 
 func TestVerify_InvalidSignature(t *testing.T) {
+	t.Parallel()
 	secret := "my-webhook-secret"
 	body := []byte(`{"action":"created"}`)
 
@@ -51,6 +54,7 @@ func TestVerify_InvalidSignature(t *testing.T) {
 }
 
 func TestVerify_MissingHeader(t *testing.T) {
+	t.Parallel()
 	r := New("secret")
 	err := r.Verify(context.Background(), http.Header{}, []byte("body"))
 	if err == nil {
@@ -62,6 +66,7 @@ func TestVerify_MissingHeader(t *testing.T) {
 }
 
 func TestVerify_MalformedPrefix(t *testing.T) {
+	t.Parallel()
 	headers := http.Header{}
 	headers.Set("X-Hub-Signature-256", "md5=abc123")
 
@@ -76,6 +81,7 @@ func TestVerify_MalformedPrefix(t *testing.T) {
 }
 
 func TestVerify_EmptySecret_SkipsValidation(t *testing.T) {
+	t.Parallel()
 	r := New("")
 	if err := r.Verify(context.Background(), http.Header{}, nil); err != nil {
 		t.Fatalf("Verify() should pass when no secret is configured, got: %v", err)
@@ -83,6 +89,7 @@ func TestVerify_EmptySecret_SkipsValidation(t *testing.T) {
 }
 
 func TestDecode_DeploymentEvent(t *testing.T) {
+	t.Parallel()
 	payload := deploymentEvent{
 		Action: "created",
 		Deployment: deployment{
@@ -158,6 +165,7 @@ func TestDecode_DeploymentEvent(t *testing.T) {
 }
 
 func TestDecode_PushEvent(t *testing.T) {
+	t.Parallel()
 	payload := pushEvent{
 		Ref:     "refs/heads/main",
 		Before:  "0000000000000000000000000000000000000000",
@@ -217,6 +225,7 @@ func TestDecode_PushEvent(t *testing.T) {
 }
 
 func TestDecode_DeploymentStatusEvent_Failure(t *testing.T) {
+	t.Parallel()
 	payload := deploymentStatusEvent{
 		DeploymentStatus: deploymentState{
 			ID:          100,
@@ -268,6 +277,7 @@ func TestDecode_DeploymentStatusEvent_Failure(t *testing.T) {
 }
 
 func TestDecode_DeploymentStatusEvent_Success_ReturnsEmpty(t *testing.T) {
+	t.Parallel()
 	payload := deploymentStatusEvent{
 		DeploymentStatus: deploymentState{
 			ID:    100,
@@ -296,6 +306,7 @@ func TestDecode_DeploymentStatusEvent_Success_ReturnsEmpty(t *testing.T) {
 }
 
 func TestDecode_UnknownEvent_ReturnsEmpty(t *testing.T) {
+	t.Parallel()
 	headers := http.Header{}
 	headers.Set("X-GitHub-Event", "issues")
 
@@ -310,6 +321,7 @@ func TestDecode_UnknownEvent_ReturnsEmpty(t *testing.T) {
 }
 
 func TestFingerprint_Deterministic(t *testing.T) {
+	t.Parallel()
 	fp1 := fingerprint("org/repo", "production", "abc123")
 	fp2 := fingerprint("org/repo", "production", "abc123")
 	if fp1 != fp2 {
@@ -323,6 +335,7 @@ func TestFingerprint_Deterministic(t *testing.T) {
 }
 
 func TestFingerprint_Format(t *testing.T) {
+	t.Parallel()
 	fp := fingerprint("org/repo", "production", "abc123")
 	if len(fp) != 64 {
 		t.Errorf("fingerprint length = %d, want 64 (sha256 hex)", len(fp))

@@ -8,6 +8,7 @@ import (
 )
 
 func TestResolver_Resolve_WithEntityHints(t *testing.T) {
+	t.Parallel()
 	hints := []contracts.TargetRef{
 		{Kind: "service", Name: "payment", Namespace: "prod"},
 	}
@@ -27,6 +28,7 @@ func TestResolver_Resolve_WithEntityHints(t *testing.T) {
 }
 
 func TestResolver_Resolve_InfersFromLabels(t *testing.T) {
+	t.Parallel()
 	alert := &contracts.NormalizedAlert{
 		StartsAt: time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC),
 		Labels:   map[string]string{"service": "order-api", "namespace": "prod"},
@@ -43,6 +45,7 @@ func TestResolver_Resolve_InfersFromLabels(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_ServiceLabel(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	labels := map[string]string{"service": "payment", "namespace": "prod"}
 	targets := r.inferFromLabels(labels)
@@ -59,6 +62,7 @@ func TestResolver_InferFromLabels_ServiceLabel(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_AppLabel(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	labels := map[string]string{"app": "order-api"}
 	targets := r.inferFromLabels(labels)
@@ -72,6 +76,7 @@ func TestResolver_InferFromLabels_AppLabel(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_K8sAppLabel(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	labels := map[string]string{"app.kubernetes.io/name": "foo"}
 	targets := r.inferFromLabels(labels)
@@ -85,6 +90,7 @@ func TestResolver_InferFromLabels_K8sAppLabel(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_Deployment(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	labels := map[string]string{"deployment": "web", "namespace": "prod"}
 	targets := r.inferFromLabels(labels)
@@ -102,6 +108,7 @@ func TestResolver_InferFromLabels_Deployment(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_Pod(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	labels := map[string]string{"pod": "web-abc123", "namespace": "prod"}
 	targets := r.inferFromLabels(labels)
@@ -119,6 +126,7 @@ func TestResolver_InferFromLabels_Pod(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_NoDeployWithoutNamespace(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	labels := map[string]string{"deployment": "web"}
 	targets := r.inferFromLabels(labels)
@@ -131,6 +139,7 @@ func TestResolver_InferFromLabels_NoDeployWithoutNamespace(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_ClusterAndEnv(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	labels := map[string]string{
 		"service":     "payment",
@@ -151,6 +160,7 @@ func TestResolver_InferFromLabels_ClusterAndEnv(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_EmptyLabels(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	targets := r.inferFromLabels(map[string]string{})
 	if len(targets) != 0 {
@@ -159,6 +169,7 @@ func TestResolver_InferFromLabels_EmptyLabels(t *testing.T) {
 }
 
 func TestResolver_InferFromLabels_MultipleTargets(t *testing.T) {
+	t.Parallel()
 	r := NewResolver()
 	labels := map[string]string{
 		"service":    "payment",
@@ -180,6 +191,7 @@ func TestResolver_InferFromLabels_MultipleTargets(t *testing.T) {
 }
 
 func TestResolver_TimeWindow_Default(t *testing.T) {
+	t.Parallel()
 	startsAt := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	alert := &contracts.NormalizedAlert{StartsAt: startsAt}
 
@@ -195,6 +207,7 @@ func TestResolver_TimeWindow_Default(t *testing.T) {
 }
 
 func TestResolver_TimeWindow_WithEndsAt(t *testing.T) {
+	t.Parallel()
 	startsAt := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
 	endsAt := time.Date(2025, 1, 1, 13, 0, 0, 0, time.UTC)
 	alert := &contracts.NormalizedAlert{StartsAt: startsAt, EndsAt: &endsAt}
@@ -207,6 +220,7 @@ func TestResolver_TimeWindow_WithEndsAt(t *testing.T) {
 }
 
 func TestResolver_Dedup(t *testing.T) {
+	t.Parallel()
 	dup := contracts.TargetRef{Kind: "service", Name: "payment", Namespace: "prod"}
 	alert := &contracts.NormalizedAlert{
 		StartsAt:    time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC),
@@ -220,6 +234,7 @@ func TestResolver_Dedup(t *testing.T) {
 }
 
 func TestFirstLabel_Found(t *testing.T) {
+	t.Parallel()
 	labels := map[string]string{"service": "payment"}
 	if got := firstLabel(labels, "service"); got != "payment" {
 		t.Errorf("expected %q, got %q", "payment", got)
@@ -227,6 +242,7 @@ func TestFirstLabel_Found(t *testing.T) {
 }
 
 func TestFirstLabel_FallbackOrder(t *testing.T) {
+	t.Parallel()
 	labels := map[string]string{"app": "order-api"}
 	if got := firstLabel(labels, "service", "app"); got != "order-api" {
 		t.Errorf("expected %q, got %q", "order-api", got)
@@ -234,6 +250,7 @@ func TestFirstLabel_FallbackOrder(t *testing.T) {
 }
 
 func TestFirstLabel_NotFound(t *testing.T) {
+	t.Parallel()
 	labels := map[string]string{"unrelated": "value"}
 	if got := firstLabel(labels, "service", "app"); got != "" {
 		t.Errorf("expected empty string, got %q", got)

@@ -11,6 +11,7 @@ import (
 )
 
 func TestSource(t *testing.T) {
+	t.Parallel()
 	r := New("token")
 	if got := r.Source(); got != "gitlab" {
 		t.Errorf("Source() = %q, want %q", got, "gitlab")
@@ -18,6 +19,7 @@ func TestSource(t *testing.T) {
 }
 
 func TestVerify_ValidToken(t *testing.T) {
+	t.Parallel()
 	secret := "my-gitlab-token"
 	headers := http.Header{}
 	headers.Set("X-Gitlab-Token", secret)
@@ -29,6 +31,7 @@ func TestVerify_ValidToken(t *testing.T) {
 }
 
 func TestVerify_InvalidToken(t *testing.T) {
+	t.Parallel()
 	secret := "my-gitlab-token"
 	headers := http.Header{}
 	headers.Set("X-Gitlab-Token", "wrong-token")
@@ -40,6 +43,7 @@ func TestVerify_InvalidToken(t *testing.T) {
 }
 
 func TestVerify_MissingHeader(t *testing.T) {
+	t.Parallel()
 	r := New("my-secret")
 	err := r.Verify(context.Background(), http.Header{}, nil)
 	if err == nil {
@@ -51,6 +55,7 @@ func TestVerify_MissingHeader(t *testing.T) {
 }
 
 func TestVerify_EmptySecret_SkipsValidation(t *testing.T) {
+	t.Parallel()
 	r := New("")
 	if err := r.Verify(context.Background(), http.Header{}, nil); err != nil {
 		t.Fatalf("Verify() should pass when no secret is configured, got: %v", err)
@@ -58,6 +63,7 @@ func TestVerify_EmptySecret_SkipsValidation(t *testing.T) {
 }
 
 func TestDecode_DeploymentHook_Running(t *testing.T) {
+	t.Parallel()
 	payload := deploymentHookEvent{
 		ObjectKind:   "deployment",
 		Status:       "running",
@@ -131,6 +137,7 @@ func TestDecode_DeploymentHook_Running(t *testing.T) {
 }
 
 func TestDecode_DeploymentHook_Success_ReturnsEmpty(t *testing.T) {
+	t.Parallel()
 	payload := deploymentHookEvent{
 		ObjectKind:   "deployment",
 		Status:       "success",
@@ -158,6 +165,7 @@ func TestDecode_DeploymentHook_Success_ReturnsEmpty(t *testing.T) {
 }
 
 func TestDecode_DeploymentHook_Failed(t *testing.T) {
+	t.Parallel()
 	payload := deploymentHookEvent{
 		ObjectKind:   "deployment",
 		Status:       "failed",
@@ -194,6 +202,7 @@ func TestDecode_DeploymentHook_Failed(t *testing.T) {
 }
 
 func TestDecode_PushHook(t *testing.T) {
+	t.Parallel()
 	payload := pushHookEvent{
 		ObjectKind:   "push",
 		Ref:          "refs/heads/main",
@@ -252,6 +261,7 @@ func TestDecode_PushHook(t *testing.T) {
 }
 
 func TestDecode_UnknownEvent_ReturnsEmpty(t *testing.T) {
+	t.Parallel()
 	headers := http.Header{}
 	headers.Set("X-Gitlab-Event", "Merge Request Hook")
 
@@ -266,6 +276,7 @@ func TestDecode_UnknownEvent_ReturnsEmpty(t *testing.T) {
 }
 
 func TestFingerprint_Deterministic(t *testing.T) {
+	t.Parallel()
 	fp1 := fingerprint("org/repo", "production", "abc123")
 	fp2 := fingerprint("org/repo", "production", "abc123")
 	if fp1 != fp2 {

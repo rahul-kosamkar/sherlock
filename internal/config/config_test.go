@@ -444,6 +444,7 @@ func TestValidate_InvalidSlackMode(t *testing.T) {
 func TestValidate_ValidSlackModes(t *testing.T) {
 	for _, mode := range []string{"socket", "http", "both"} {
 		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
 			cfg := defaults()
 			cfg.Slack.Mode = mode
 			if err := validate(&cfg); err != nil {

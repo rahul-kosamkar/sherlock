@@ -17,6 +17,7 @@ func approxEqual(a, b float64) bool {
 // ---------------------------------------------------------------------------
 
 func TestScoreConfidence_BaseConfidence(t *testing.T) {
+	t.Parallel()
 	h := &contracts.Hypothesis{Confidence: 0.7}
 	got := ScoreConfidence(h, nil)
 	if !approxEqual(got, 0.7) {
@@ -25,6 +26,7 @@ func TestScoreConfidence_BaseConfidence(t *testing.T) {
 }
 
 func TestScoreConfidence_SupportingBoost(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki"},
 		{ID: "ev-2", Kind: contracts.EvidenceLog, Source: "loki"},
@@ -43,6 +45,7 @@ func TestScoreConfidence_SupportingBoost(t *testing.T) {
 }
 
 func TestScoreConfidence_MultipleKinds(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki"},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric, Source: "loki"},
@@ -61,6 +64,7 @@ func TestScoreConfidence_MultipleKinds(t *testing.T) {
 }
 
 func TestScoreConfidence_MultipleSources(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki"},
 		{ID: "ev-2", Kind: contracts.EvidenceLog, Source: "fluentd"},
@@ -78,6 +82,7 @@ func TestScoreConfidence_MultipleSources(t *testing.T) {
 }
 
 func TestScoreConfidence_ContradictingPenalty(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-c1", Kind: contracts.EvidenceLog, Source: "loki"},
 		{ID: "ev-c2", Kind: contracts.EvidenceMetric, Source: "prometheus"},
@@ -95,6 +100,7 @@ func TestScoreConfidence_ContradictingPenalty(t *testing.T) {
 }
 
 func TestScoreConfidence_SingleKindPenalty(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki"},
 	}
@@ -111,6 +117,7 @@ func TestScoreConfidence_SingleKindPenalty(t *testing.T) {
 }
 
 func TestScoreConfidence_Capped_At_0_95(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki"},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric, Source: "prometheus"},
@@ -129,6 +136,7 @@ func TestScoreConfidence_Capped_At_0_95(t *testing.T) {
 }
 
 func TestScoreConfidence_Floor_At_0(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-c1", Kind: contracts.EvidenceLog, Source: "loki"},
 		{ID: "ev-c2", Kind: contracts.EvidenceLog, Source: "loki"},
@@ -149,6 +157,7 @@ func TestScoreConfidence_Floor_At_0(t *testing.T) {
 }
 
 func TestScoreConfidence_NoEvidence(t *testing.T) {
+	t.Parallel()
 	h := &contracts.Hypothesis{Confidence: 0.6}
 	got := ScoreConfidence(h, nil)
 	if !approxEqual(got, 0.6) {
@@ -161,6 +170,7 @@ func TestScoreConfidence_NoEvidence(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestConfidenceRationale_Basic(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki"},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric, Source: "prometheus"},
@@ -180,6 +190,7 @@ func TestConfidenceRationale_Basic(t *testing.T) {
 }
 
 func TestConfidenceRationale_NoContradicting(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki"},
 	}
@@ -195,6 +206,7 @@ func TestConfidenceRationale_NoContradicting(t *testing.T) {
 }
 
 func TestConfidenceRationale_WithContradicting(t *testing.T) {
+	t.Parallel()
 	allEvidence := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog, Source: "loki"},
 		{ID: "ev-c1", Kind: contracts.EvidenceMetric, Source: "prometheus"},
@@ -216,6 +228,7 @@ func TestConfidenceRationale_WithContradicting(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestLookupEvidence_Found(t *testing.T) {
+	t.Parallel()
 	all := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric},
@@ -232,6 +245,7 @@ func TestLookupEvidence_Found(t *testing.T) {
 }
 
 func TestLookupEvidence_NotFound(t *testing.T) {
+	t.Parallel()
 	all := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog},
 	}
@@ -243,6 +257,7 @@ func TestLookupEvidence_NotFound(t *testing.T) {
 }
 
 func TestLookupEvidence_Partial(t *testing.T) {
+	t.Parallel()
 	all := []contracts.Evidence{
 		{ID: "ev-1", Kind: contracts.EvidenceLog},
 		{ID: "ev-2", Kind: contracts.EvidenceMetric},

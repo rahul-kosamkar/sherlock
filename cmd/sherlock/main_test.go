@@ -31,6 +31,7 @@ type testJob struct {
 }
 
 func TestParseLabelsFromText_WithText(t *testing.T) {
+	t.Parallel()
 	labels := parseLabelsFromText("payment-api")
 
 	if got := labels["source"]; got != "slack" {
@@ -42,6 +43,7 @@ func TestParseLabelsFromText_WithText(t *testing.T) {
 }
 
 func TestParseLabelsFromText_EmptyText(t *testing.T) {
+	t.Parallel()
 	labels := parseLabelsFromText("")
 
 	if got := labels["source"]; got != "slack" {
@@ -53,6 +55,7 @@ func TestParseLabelsFromText_EmptyText(t *testing.T) {
 }
 
 func TestEntityResolverAdapter_Resolve(t *testing.T) {
+	t.Parallel()
 	resolver := entity.NewResolver()
 	adapter := &entityResolverAdapter{resolver: resolver}
 
@@ -73,6 +76,7 @@ func TestEntityResolverAdapter_Resolve(t *testing.T) {
 }
 
 func TestSlackEnqueuer_Success(t *testing.T) {
+	t.Parallel()
 	pub := &mockPublisher{}
 	streamName := "sherlock-test"
 	enqueuer := &slackEnqueuer{publisher: pub, streamName: streamName}
@@ -89,6 +93,7 @@ func TestSlackEnqueuer_Success(t *testing.T) {
 }
 
 func TestSlackEnqueuer_SetsAlert(t *testing.T) {
+	t.Parallel()
 	pub := &mockPublisher{}
 	enqueuer := &slackEnqueuer{publisher: pub, streamName: "investigations"}
 
@@ -114,6 +119,7 @@ func TestSlackEnqueuer_SetsAlert(t *testing.T) {
 }
 
 func TestSlackEnqueuer_PublishError(t *testing.T) {
+	t.Parallel()
 	pub := &mockPublisher{err: fmt.Errorf("nats connection lost")}
 	enqueuer := &slackEnqueuer{publisher: pub, streamName: "investigations"}
 

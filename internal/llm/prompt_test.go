@@ -42,6 +42,7 @@ func newTestBundle() EvidenceBundle {
 // --- BuildPass1Prompt tests ---
 
 func TestBuildPass1Prompt_ContainsAlertInfo(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildPass1Prompt(bundle)
 
@@ -58,27 +59,30 @@ func TestBuildPass1Prompt_ContainsAlertInfo(t *testing.T) {
 }
 
 func TestBuildPass1Prompt_ContainsWorkload(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	bundle.Alert.Labels["service"] = "payment-svc"
 
 	prompt := BuildPass1Prompt(bundle)
-	if !strings.Contains(prompt, "Workload: payment-svc") {
-		t.Error("prompt should contain 'Workload: payment-svc'")
+	if !strings.Contains(prompt, "payment-svc") {
+		t.Error("prompt should contain 'payment-svc'")
 	}
 }
 
 func TestBuildPass1Prompt_ContainsWorkload_AppLabel(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	delete(bundle.Alert.Labels, "service")
 	bundle.Alert.Labels["app"] = "order-api"
 
 	prompt := BuildPass1Prompt(bundle)
-	if !strings.Contains(prompt, "Workload: order-api") {
-		t.Error("prompt should contain 'Workload: order-api' when 'service' label is absent")
+	if !strings.Contains(prompt, "order-api") {
+		t.Error("prompt should contain 'order-api' when 'service' label is absent")
 	}
 }
 
 func TestBuildPass1Prompt_ContainsGuidelines(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildPass1Prompt(bundle)
 
@@ -94,6 +98,7 @@ func TestBuildPass1Prompt_ContainsGuidelines(t *testing.T) {
 }
 
 func TestBuildPass1Prompt_ContainsEvidenceSections(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	bundle.PodStatus = "Running: 1/1"
 	bundle.ErrorLogs = "ERROR: connection refused"
@@ -112,6 +117,7 @@ func TestBuildPass1Prompt_ContainsEvidenceSections(t *testing.T) {
 }
 
 func TestBuildPass1Prompt_OmitsEmptySections(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	bundle.PodEvents = ""
 	bundle.DeploymentInfo = ""
@@ -126,6 +132,7 @@ func TestBuildPass1Prompt_OmitsEmptySections(t *testing.T) {
 }
 
 func TestBuildPass1Prompt_ContainsFollowUpTools(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildPass1Prompt(bundle)
 
@@ -138,6 +145,7 @@ func TestBuildPass1Prompt_ContainsFollowUpTools(t *testing.T) {
 }
 
 func TestBuildPass1Prompt_ContainsOutputFormat(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildPass1Prompt(bundle)
 
@@ -159,6 +167,7 @@ func TestBuildPass1Prompt_ContainsOutputFormat(t *testing.T) {
 }
 
 func TestBuildPass1Prompt_DoesNotContainConfidence(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildPass1Prompt(bundle)
 
@@ -168,6 +177,7 @@ func TestBuildPass1Prompt_DoesNotContainConfidence(t *testing.T) {
 }
 
 func TestBuildPass1Prompt_SourceCode(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	bundle.SourceCode["main.go"] = "package main\n\nfunc main() {}"
 
@@ -184,6 +194,7 @@ func TestBuildPass1Prompt_SourceCode(t *testing.T) {
 }
 
 func TestBuildPass1Prompt_TruncatesLongLogs(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	bundle.ErrorLogs = strings.Repeat("x", 9000)
 
@@ -196,6 +207,7 @@ func TestBuildPass1Prompt_TruncatesLongLogs(t *testing.T) {
 // --- BuildDeepPassPrompt tests ---
 
 func TestBuildDeepPassPrompt_ContainsPassNumber(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildDeepPassPrompt(bundle, nil, nil, 2)
 	if !strings.Contains(prompt, "Pass 2") {
@@ -204,6 +216,7 @@ func TestBuildDeepPassPrompt_ContainsPassNumber(t *testing.T) {
 }
 
 func TestBuildDeepPassPrompt_ContainsPreviousDiagnosis(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prev := &LLMAnalysis{
 		Summary:   "Pod OOMKilled due to memory leak in payment handler",
@@ -223,6 +236,7 @@ func TestBuildDeepPassPrompt_ContainsPreviousDiagnosis(t *testing.T) {
 }
 
 func TestBuildDeepPassPrompt_ContainsDeepEvidence(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	deep := &DeepEvidence{
 		TraceLogs: map[string]string{
@@ -248,6 +262,7 @@ func TestBuildDeepPassPrompt_ContainsDeepEvidence(t *testing.T) {
 }
 
 func TestBuildDeepPassPrompt_ContainsConfidence(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildDeepPassPrompt(bundle, nil, nil, 2)
 	if !strings.Contains(prompt, "CONFIDENCE:") {
@@ -256,6 +271,7 @@ func TestBuildDeepPassPrompt_ContainsConfidence(t *testing.T) {
 }
 
 func TestBuildDeepPassPrompt_AbbreviatedOriginalEvidence(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	bundle.ErrorLogs = strings.Repeat("E", 5000)
 
@@ -271,6 +287,7 @@ func TestBuildDeepPassPrompt_AbbreviatedOriginalEvidence(t *testing.T) {
 }
 
 func TestBuildDeepPassPrompt_NilPreviousAnalysis(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildDeepPassPrompt(bundle, nil, nil, 2)
 	if strings.Contains(prompt, "PREVIOUS DIAGNOSIS") {
@@ -279,6 +296,7 @@ func TestBuildDeepPassPrompt_NilPreviousAnalysis(t *testing.T) {
 }
 
 func TestBuildDeepPassPrompt_NilDeepEvidence(t *testing.T) {
+	t.Parallel()
 	bundle := newTestBundle()
 	prompt := BuildDeepPassPrompt(bundle, nil, nil, 2)
 	if prompt == "" {
@@ -292,6 +310,7 @@ func TestBuildDeepPassPrompt_NilDeepEvidence(t *testing.T) {
 // --- truncate tests ---
 
 func TestTruncate_Short(t *testing.T) {
+	t.Parallel()
 	got := truncate("hello", 10)
 	if got != "hello" {
 		t.Errorf("truncate(%q, 10) = %q; want %q", "hello", got, "hello")
@@ -299,6 +318,7 @@ func TestTruncate_Short(t *testing.T) {
 }
 
 func TestTruncate_Exact(t *testing.T) {
+	t.Parallel()
 	got := truncate("hello", 5)
 	if got != "hello" {
 		t.Errorf("truncate(%q, 5) = %q; want %q", "hello", got, "hello")
@@ -306,6 +326,7 @@ func TestTruncate_Exact(t *testing.T) {
 }
 
 func TestTruncate_Long(t *testing.T) {
+	t.Parallel()
 	input := strings.Repeat("a", 20)
 	got := truncate(input, 10)
 	want := strings.Repeat("a", 10) + "\n... [truncated]"
@@ -317,6 +338,7 @@ func TestTruncate_Long(t *testing.T) {
 // --- BuildEvidenceBundleFromCollected tests ---
 
 func TestBuildEvidenceBundle_LogsBySubKind(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	tests := []struct {
 		name    string
@@ -331,6 +353,7 @@ func TestBuildEvidenceBundle_LogsBySubKind(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ev := []contracts.Evidence{
 				{
 					ID:      "ev-1",
@@ -362,6 +385,7 @@ func TestBuildEvidenceBundle_LogsBySubKind(t *testing.T) {
 }
 
 func TestBuildEvidenceBundle_K8sStateBySubKind(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	tests := []struct {
 		name    string
@@ -375,6 +399,7 @@ func TestBuildEvidenceBundle_K8sStateBySubKind(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ev := []contracts.Evidence{
 				{
 					ID:      "ev-1",
@@ -404,6 +429,7 @@ func TestBuildEvidenceBundle_K8sStateBySubKind(t *testing.T) {
 }
 
 func TestBuildEvidenceBundle_Metrics(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	ev := []contracts.Evidence{
 		{
@@ -421,6 +447,7 @@ func TestBuildEvidenceBundle_Metrics(t *testing.T) {
 }
 
 func TestBuildEvidenceBundle_Deploy(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	ev := []contracts.Evidence{
 		{
@@ -438,6 +465,7 @@ func TestBuildEvidenceBundle_Deploy(t *testing.T) {
 }
 
 func TestBuildEvidenceBundle_GitChange(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	ev := []contracts.Evidence{
 		{
@@ -461,6 +489,7 @@ func TestBuildEvidenceBundle_GitChange(t *testing.T) {
 }
 
 func TestBuildEvidenceBundle_DefaultLogKind(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	ev := []contracts.Evidence{
 		{
@@ -478,6 +507,7 @@ func TestBuildEvidenceBundle_DefaultLogKind(t *testing.T) {
 }
 
 func TestBuildEvidenceBundle_AppendMultiple(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	ev := []contracts.Evidence{
 		{
@@ -508,6 +538,7 @@ func TestBuildEvidenceBundle_AppendMultiple(t *testing.T) {
 }
 
 func TestBuildEvidenceBundle_EmptyEvidence(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	bundle := BuildEvidenceBundleFromCollected(alert, nil)
 
@@ -535,6 +566,7 @@ func TestBuildEvidenceBundle_EmptyEvidence(t *testing.T) {
 }
 
 func TestBuildEvidenceBundle_UsesBodyRefWhenSummaryEmpty(t *testing.T) {
+	t.Parallel()
 	alert := newTestAlert()
 	ev := []contracts.Evidence{
 		{

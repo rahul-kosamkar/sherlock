@@ -25,6 +25,7 @@ func (m *mockSlackAPI) PostMessageContext(_ context.Context, channelID string, _
 }
 
 func TestConfidenceIndicator(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		confidence float64
@@ -42,6 +43,7 @@ func TestConfidenceIndicator(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := confidenceIndicator(tt.confidence)
 			if got != tt.want {
 				t.Errorf("confidenceIndicator(%f) = %q, want %q", tt.confidence, got, tt.want)
@@ -51,6 +53,7 @@ func TestConfidenceIndicator(t *testing.T) {
 }
 
 func TestConfidenceColor(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		confidence float64
@@ -66,6 +69,7 @@ func TestConfidenceColor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := confidenceColor(tt.confidence)
 			if got != tt.want {
 				t.Errorf("confidenceColor(%f) = %q, want %q", tt.confidence, got, tt.want)
@@ -75,6 +79,7 @@ func TestConfidenceColor(t *testing.T) {
 }
 
 func TestTruncateSlackText(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		input  string
@@ -90,6 +95,7 @@ func TestTruncateSlackText(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := truncateSlackText(tt.input, tt.maxLen)
 			if got != tt.want {
 				t.Errorf("truncateSlackText(%q, %d) = %q, want %q", tt.input, tt.maxLen, got, tt.want)
@@ -99,6 +105,7 @@ func TestTruncateSlackText(t *testing.T) {
 }
 
 func TestBuildResultBlocks_RoutesToRuleBasedForNonLLM(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -114,6 +121,7 @@ func TestBuildResultBlocks_RoutesToRuleBasedForNonLLM(t *testing.T) {
 }
 
 func TestBuildResultBlocks_RoutesToLLMForLLMEngine(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -146,6 +154,7 @@ func TestBuildResultBlocks_RoutesToLLMForLLMEngine(t *testing.T) {
 }
 
 func TestBuildRuleResultBlocks_Structure(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -171,6 +180,7 @@ func TestBuildRuleResultBlocks_Structure(t *testing.T) {
 }
 
 func TestBuildRuleResultBlocks_NoHypotheses(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -185,6 +195,7 @@ func TestBuildRuleResultBlocks_NoHypotheses(t *testing.T) {
 }
 
 func TestBuildRuleResultBlocks_NoActions(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -202,6 +213,7 @@ func TestBuildRuleResultBlocks_NoActions(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_Structure(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -235,6 +247,7 @@ func TestBuildLLMResultBlocks_Structure(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_SinglePass(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -251,6 +264,7 @@ func TestBuildLLMResultBlocks_SinglePass(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_NoRootCause(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -267,6 +281,7 @@ func TestBuildLLMResultBlocks_NoRootCause(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_NoSeverity(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -284,6 +299,7 @@ func TestBuildLLMResultBlocks_NoSeverity(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_ManyRecommendations(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	actions := make([]contracts.SuggestedFix, 8)
 	for i := range actions {
@@ -305,6 +321,7 @@ func TestBuildLLMResultBlocks_ManyRecommendations(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_NoAIMetadata(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-1",
@@ -320,6 +337,7 @@ func TestBuildLLMResultBlocks_NoAIMetadata(t *testing.T) {
 }
 
 func TestBuildActionButtons(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-123",
@@ -334,6 +352,7 @@ func TestBuildActionButtons(t *testing.T) {
 // --- Additional Tests ---
 
 func TestConfidenceIndicator_AllRanges(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		confidence float64
@@ -352,6 +371,7 @@ func TestConfidenceIndicator_AllRanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := confidenceIndicator(tt.confidence)
 			if got != tt.want {
 				t.Errorf("confidenceIndicator(%f) = %q, want %q", tt.confidence, got, tt.want)
@@ -361,6 +381,7 @@ func TestConfidenceIndicator_AllRanges(t *testing.T) {
 }
 
 func TestConfidenceColor_AllRanges(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		confidence float64
@@ -378,6 +399,7 @@ func TestConfidenceColor_AllRanges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got := confidenceColor(tt.confidence)
 			if got != tt.want {
 				t.Errorf("confidenceColor(%f) = %q, want %q", tt.confidence, got, tt.want)
@@ -387,6 +409,7 @@ func TestConfidenceColor_AllRanges(t *testing.T) {
 }
 
 func TestTruncateSlackText_ExactLength(t *testing.T) {
+	t.Parallel()
 	input := "exact"
 	got := truncateSlackText(input, 5)
 	if got != input {
@@ -395,6 +418,7 @@ func TestTruncateSlackText_ExactLength(t *testing.T) {
 }
 
 func TestBuildRuleResultBlocks_MultipleHypotheses(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-multi",
@@ -427,6 +451,7 @@ func TestBuildRuleResultBlocks_MultipleHypotheses(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_WithRootCause(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-rc",
@@ -455,6 +480,7 @@ func TestBuildLLMResultBlocks_WithRootCause(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_WithMetadata(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID: "inv-meta",
@@ -488,6 +514,7 @@ func TestBuildLLMResultBlocks_WithMetadata(t *testing.T) {
 }
 
 func TestBuildLLMResultBlocks_NoRecommendedActions(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 	result := &contracts.InvestigationResult{
 		InvestigationID:    "inv-nofix",
@@ -510,9 +537,11 @@ func TestBuildLLMResultBlocks_NoRecommendedActions(t *testing.T) {
 }
 
 func TestBuildResultBlocks_RoutesBasedOnEngine(t *testing.T) {
+	t.Parallel()
 	p := &Publisher{}
 
 	t.Run("llm-powered", func(t *testing.T) {
+		t.Parallel()
 		result := &contracts.InvestigationResult{
 			InvestigationID: "inv-llm",
 			Headline:        "LLM analysis",
@@ -534,6 +563,7 @@ func TestBuildResultBlocks_RoutesBasedOnEngine(t *testing.T) {
 	})
 
 	t.Run("rule-based", func(t *testing.T) {
+		t.Parallel()
 		result := &contracts.InvestigationResult{
 			InvestigationID: "inv-rule",
 			Headline:        "Rule analysis",
@@ -555,6 +585,7 @@ func TestBuildResultBlocks_RoutesBasedOnEngine(t *testing.T) {
 }
 
 func TestNewPublisher(t *testing.T) {
+	t.Parallel()
 	p := NewPublisher("xoxb-test-token", zap.NewNop())
 	if p == nil {
 		t.Fatal("NewPublisher returned nil")
@@ -565,6 +596,7 @@ func TestNewPublisher(t *testing.T) {
 }
 
 func TestPostInvestigationStarted_Success(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{ts: "1234567890.123456"}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -581,6 +613,7 @@ func TestPostInvestigationStarted_Success(t *testing.T) {
 }
 
 func TestPostInvestigationStarted_WithoutID(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{ts: "ts-1"}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -594,6 +627,7 @@ func TestPostInvestigationStarted_WithoutID(t *testing.T) {
 }
 
 func TestPostInvestigationStarted_Error(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{err: errors.New("slack error")}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -604,6 +638,7 @@ func TestPostInvestigationStarted_Error(t *testing.T) {
 }
 
 func TestPostEvidenceUpdate_Success(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{ts: "ts-1"}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -617,6 +652,7 @@ func TestPostEvidenceUpdate_Success(t *testing.T) {
 }
 
 func TestPostEvidenceUpdate_Error(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{err: errors.New("network error")}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -627,6 +663,7 @@ func TestPostEvidenceUpdate_Error(t *testing.T) {
 }
 
 func TestPostResult_Success(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{ts: "ts-1"}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -643,6 +680,7 @@ func TestPostResult_Success(t *testing.T) {
 }
 
 func TestPostResult_Error(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{err: errors.New("api error")}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -658,6 +696,7 @@ func TestPostResult_Error(t *testing.T) {
 }
 
 func TestNotifyPassStarted_Success(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{ts: "ts-1"}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -668,6 +707,7 @@ func TestNotifyPassStarted_Success(t *testing.T) {
 }
 
 func TestNotifyPassStarted_Error(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{err: errors.New("timeout")}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -678,6 +718,7 @@ func TestNotifyPassStarted_Error(t *testing.T) {
 }
 
 func TestPostError_Success(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{ts: "ts-1"}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -688,6 +729,7 @@ func TestPostError_Success(t *testing.T) {
 }
 
 func TestPostError_WithoutThread(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{ts: "ts-1"}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 
@@ -698,6 +740,7 @@ func TestPostError_WithoutThread(t *testing.T) {
 }
 
 func TestPostError_Error(t *testing.T) {
+	t.Parallel()
 	mock := &mockSlackAPI{err: errors.New("api down")}
 	p := &Publisher{slackClient: mock, logger: zap.NewNop()}
 

@@ -21,6 +21,7 @@ func (m *mockAuditStore) Create(_ context.Context, entry *contracts.AuditEntry) 
 }
 
 func TestLogger_Log_CreatesEntry(t *testing.T) {
+	t.Parallel()
 	store := &mockAuditStore{}
 	logger := NewLogger(store, zap.NewNop())
 
@@ -59,6 +60,7 @@ func TestLogger_Log_CreatesEntry(t *testing.T) {
 }
 
 func TestLogger_Log_StoreError(t *testing.T) {
+	t.Parallel()
 	store := &mockAuditStore{err: errors.New("db unreachable")}
 	logger := NewLogger(store, zap.NewNop())
 
@@ -69,6 +71,7 @@ func TestLogger_Log_StoreError(t *testing.T) {
 }
 
 func TestLogger_LogAction_FillsID(t *testing.T) {
+	t.Parallel()
 	store := &mockAuditStore{}
 	logger := NewLogger(store, zap.NewNop())
 
@@ -89,6 +92,7 @@ func TestLogger_LogAction_FillsID(t *testing.T) {
 }
 
 func TestLogger_LogAction_FillsTimestamp(t *testing.T) {
+	t.Parallel()
 	store := &mockAuditStore{}
 	logger := NewLogger(store, zap.NewNop())
 
@@ -108,6 +112,7 @@ func TestLogger_LogAction_FillsTimestamp(t *testing.T) {
 }
 
 func TestLogger_LogAction_PreservesExistingID(t *testing.T) {
+	t.Parallel()
 	store := &mockAuditStore{}
 	logger := NewLogger(store, zap.NewNop())
 
@@ -128,6 +133,7 @@ func TestLogger_LogAction_PreservesExistingID(t *testing.T) {
 }
 
 func TestLogger_LogAction_PreservesExistingTimestamp(t *testing.T) {
+	t.Parallel()
 	store := &mockAuditStore{}
 	logger := NewLogger(store, zap.NewNop())
 
@@ -149,6 +155,7 @@ func TestLogger_LogAction_PreservesExistingTimestamp(t *testing.T) {
 }
 
 func TestLogger_LogAction_StoreError(t *testing.T) {
+	t.Parallel()
 	store := &mockAuditStore{err: errors.New("disk full")}
 	logger := NewLogger(store, zap.NewNop())
 
@@ -169,6 +176,7 @@ func TestLogger_LogAction_StoreError(t *testing.T) {
 }
 
 func TestLogger_Log_MetadataPassed(t *testing.T) {
+	t.Parallel()
 	store := &mockAuditStore{}
 	logger := NewLogger(store, zap.NewNop())
 

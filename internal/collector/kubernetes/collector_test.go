@@ -18,6 +18,7 @@ func newTestCollector(client *fake.Clientset) *Collector {
 }
 
 func TestCollector_Name(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	if got := c.Name(); got != "kubernetes" {
 		t.Fatalf("Name() = %q, want %q", got, "kubernetes")
@@ -25,30 +26,35 @@ func TestCollector_Name(t *testing.T) {
 }
 
 func TestIsK8sTarget_Deployment(t *testing.T) {
+	t.Parallel()
 	if !isK8sTarget(contracts.TargetRef{Kind: "k8s.deployment"}) {
 		t.Fatal("expected k8s.deployment to be a K8s target")
 	}
 }
 
 func TestIsK8sTarget_Pod(t *testing.T) {
+	t.Parallel()
 	if !isK8sTarget(contracts.TargetRef{Kind: "k8s.pod"}) {
 		t.Fatal("expected k8s.pod to be a K8s target")
 	}
 }
 
 func TestIsK8sTarget_Service(t *testing.T) {
+	t.Parallel()
 	if !isK8sTarget(contracts.TargetRef{Kind: "service"}) {
 		t.Fatal("expected service to be a K8s target")
 	}
 }
 
 func TestIsK8sTarget_Unknown(t *testing.T) {
+	t.Parallel()
 	if isK8sTarget(contracts.TargetRef{Kind: "database"}) {
 		t.Fatal("expected database to not be a K8s target")
 	}
 }
 
 func TestBuildLabelSelector_Pod(t *testing.T) {
+	t.Parallel()
 	got := buildLabelSelector(contracts.TargetRef{Kind: "k8s.pod", Name: "web-abc"})
 	if got != "" {
 		t.Fatalf("buildLabelSelector(k8s.pod) = %q, want empty string", got)
@@ -56,6 +62,7 @@ func TestBuildLabelSelector_Pod(t *testing.T) {
 }
 
 func TestBuildLabelSelector_Deployment(t *testing.T) {
+	t.Parallel()
 	got := buildLabelSelector(contracts.TargetRef{Kind: "k8s.deployment", Name: "web"})
 	if got != "app=web" {
 		t.Fatalf("buildLabelSelector(k8s.deployment) = %q, want %q", got, "app=web")
@@ -63,6 +70,7 @@ func TestBuildLabelSelector_Deployment(t *testing.T) {
 }
 
 func TestBuildLabelSelector_Service(t *testing.T) {
+	t.Parallel()
 	got := buildLabelSelector(contracts.TargetRef{Kind: "service", Name: "api"})
 	if got != "app=api" {
 		t.Fatalf("buildLabelSelector(service) = %q, want %q", got, "app=api")
@@ -70,6 +78,7 @@ func TestBuildLabelSelector_Service(t *testing.T) {
 }
 
 func TestCollect_SkipsNonK8sTargets(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := contracts.CollectRequest{
 		InvestigationID: "inv-1",
@@ -101,6 +110,7 @@ func baseRequest() contracts.CollectRequest {
 }
 
 func TestPodStateEvidence_CrashLoopBackOff(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	pod := &corev1.Pod{
@@ -133,6 +143,7 @@ func TestPodStateEvidence_CrashLoopBackOff(t *testing.T) {
 }
 
 func TestPodStateEvidence_OOMKilled_LastTermination(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	pod := &corev1.Pod{
@@ -163,6 +174,7 @@ func TestPodStateEvidence_OOMKilled_LastTermination(t *testing.T) {
 }
 
 func TestPodStateEvidence_OOMKilled_Current(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	pod := &corev1.Pod{
@@ -192,6 +204,7 @@ func TestPodStateEvidence_OOMKilled_Current(t *testing.T) {
 }
 
 func TestPodStateEvidence_Restarts(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	pod := &corev1.Pod{
@@ -222,6 +235,7 @@ func TestPodStateEvidence_Restarts(t *testing.T) {
 }
 
 func TestPodStateEvidence_NotReady(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	pod := &corev1.Pod{
@@ -249,6 +263,7 @@ func TestPodStateEvidence_NotReady(t *testing.T) {
 }
 
 func TestPodStateEvidence_Healthy(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	pod := &corev1.Pod{
@@ -273,6 +288,7 @@ func TestPodStateEvidence_Healthy(t *testing.T) {
 }
 
 func TestEventEvidence_Warning(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	target := req.Targets[0]
@@ -301,6 +317,7 @@ func TestEventEvidence_Warning(t *testing.T) {
 }
 
 func TestEventEvidence_Normal(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	target := req.Targets[0]
@@ -329,6 +346,7 @@ func TestEventEvidence_Normal(t *testing.T) {
 }
 
 func TestEventEvidence_BeforeTimeWindow(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	target := req.Targets[0]
@@ -354,6 +372,7 @@ func TestEventEvidence_BeforeTimeWindow(t *testing.T) {
 }
 
 func TestCollectForTarget_WithFakeClient(t *testing.T) {
+	t.Parallel()
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "web-abc123",
@@ -420,6 +439,7 @@ func TestCollectForTarget_WithFakeClient(t *testing.T) {
 }
 
 func TestCollect_WithFakeClient_IntegrationFlow(t *testing.T) {
+	t.Parallel()
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "web-xyz789",
@@ -465,6 +485,7 @@ func TestCollect_WithFakeClient_IntegrationFlow(t *testing.T) {
 }
 
 func TestListPods_WithFakeClient(t *testing.T) {
+	t.Parallel()
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "api-abc",
@@ -489,6 +510,7 @@ func TestListPods_WithFakeClient(t *testing.T) {
 }
 
 func TestListEvents_WithFakeClient(t *testing.T) {
+	t.Parallel()
 	event := &corev1.Event{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-evt", Namespace: "prod"},
 		InvolvedObject: corev1.ObjectReference{
@@ -513,6 +535,7 @@ func TestListEvents_WithFakeClient(t *testing.T) {
 }
 
 func TestPreviousLogEvidence_NoRestarts(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(fake.NewSimpleClientset())
 	req := baseRequest()
 	pod := &corev1.Pod{
@@ -530,6 +553,7 @@ func TestPreviousLogEvidence_NoRestarts(t *testing.T) {
 }
 
 func TestBuildLabelSelector_Default(t *testing.T) {
+	t.Parallel()
 	got := buildLabelSelector(contracts.TargetRef{Kind: "unknown-kind", Name: "myapp"})
 	if got != "app=myapp" {
 		t.Fatalf("buildLabelSelector(unknown) = %q, want %q", got, "app=myapp")

@@ -24,6 +24,7 @@ func loadFixture(t *testing.T, name string) []byte {
 }
 
 func TestDecode_FiringAlert(t *testing.T) {
+	t.Parallel()
 	body := loadFixture(t, "alert_firing.json")
 	r := grafana.New("")
 
@@ -70,6 +71,7 @@ func TestDecode_FiringAlert(t *testing.T) {
 }
 
 func TestVerify_ValidSignature(t *testing.T) {
+	t.Parallel()
 	secret := "test-secret-key"
 	body := []byte(`{"status":"firing"}`)
 
@@ -87,6 +89,7 @@ func TestVerify_ValidSignature(t *testing.T) {
 }
 
 func TestVerify_InvalidSignature(t *testing.T) {
+	t.Parallel()
 	secret := "test-secret-key"
 	body := []byte(`{"status":"firing"}`)
 
@@ -100,6 +103,7 @@ func TestVerify_InvalidSignature(t *testing.T) {
 }
 
 func TestVerify_NoSecret_SkipsValidation(t *testing.T) {
+	t.Parallel()
 	r := grafana.New("")
 	if err := r.Verify(context.Background(), http.Header{}, nil); err != nil {
 		t.Fatalf("Verify() should pass when no secret is configured, got: %v", err)

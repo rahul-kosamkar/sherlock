@@ -13,6 +13,7 @@ import (
 )
 
 func TestName(t *testing.T) {
+	t.Parallel()
 	c := New(Config{}, zap.NewNop())
 	if got := c.Name(); got != "deploy" {
 		t.Errorf("Name() = %q, want %q", got, "deploy")
@@ -20,6 +21,7 @@ func TestName(t *testing.T) {
 }
 
 func TestCollect_ResolvesRepoFromWorkloadMap(t *testing.T) {
+	t.Parallel()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode([]ghDeployment{})
@@ -49,6 +51,7 @@ func TestCollect_ResolvesRepoFromWorkloadMap(t *testing.T) {
 }
 
 func TestCollect_NoMatchingRepo_ReturnsEmpty(t *testing.T) {
+	t.Parallel()
 	c := &Collector{
 		githubToken:   "test-token",
 		githubOrg:     "org",
@@ -75,6 +78,7 @@ func TestCollect_NoMatchingRepo_ReturnsEmpty(t *testing.T) {
 }
 
 func TestCollect_GitHubDeployments(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-30 * time.Minute)
 
@@ -139,6 +143,7 @@ func TestCollect_GitHubDeployments(t *testing.T) {
 }
 
 func TestCollect_GitHubDeploymentsAPI_Mock(t *testing.T) {
+	t.Parallel()
 	now := time.Now().UTC()
 	deployTime := now.Add(-30 * time.Minute)
 
@@ -192,6 +197,7 @@ func TestCollect_GitHubDeploymentsAPI_Mock(t *testing.T) {
 }
 
 func TestCollect_GitHubCompareAPI_Mock(t *testing.T) {
+	t.Parallel()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/repos/org/my-repo/compare/base123...head456", func(w http.ResponseWriter, r *http.Request) {
 		comparison := ghComparison{
@@ -260,6 +266,7 @@ func TestCollect_GitHubCompareAPI_Mock(t *testing.T) {
 }
 
 func TestDeployScore_WithinOneHour(t *testing.T) {
+	t.Parallel()
 	c := &Collector{}
 	alertTime := time.Now()
 	deployTime := alertTime.Add(-30 * time.Minute)
@@ -271,6 +278,7 @@ func TestDeployScore_WithinOneHour(t *testing.T) {
 }
 
 func TestDeployScore_WithinTwoHours(t *testing.T) {
+	t.Parallel()
 	c := &Collector{}
 	alertTime := time.Now()
 	deployTime := alertTime.Add(-90 * time.Minute)
@@ -282,6 +290,7 @@ func TestDeployScore_WithinTwoHours(t *testing.T) {
 }
 
 func TestDeployScore_BeyondTwoHours(t *testing.T) {
+	t.Parallel()
 	c := &Collector{}
 	alertTime := time.Now()
 	deployTime := alertTime.Add(-3 * time.Hour)
@@ -293,6 +302,7 @@ func TestDeployScore_BeyondTwoHours(t *testing.T) {
 }
 
 func TestDeployScore_NegativeDiff(t *testing.T) {
+	t.Parallel()
 	c := &Collector{}
 	alertTime := time.Now()
 	deployTime := alertTime.Add(20 * time.Minute)
@@ -304,6 +314,7 @@ func TestDeployScore_NegativeDiff(t *testing.T) {
 }
 
 func TestCollect_APIError_HandledGracefully(t *testing.T) {
+	t.Parallel()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -327,6 +338,7 @@ func TestCollect_APIError_HandledGracefully(t *testing.T) {
 }
 
 func TestResolveRepo_DirectRepo(t *testing.T) {
+	t.Parallel()
 	c := &Collector{workloadRepos: map[string]string{"svc": "svc-repo"}}
 
 	target := contracts.TargetRef{Kind: "service", Name: "svc", Repo: "direct-repo"}
@@ -336,6 +348,7 @@ func TestResolveRepo_DirectRepo(t *testing.T) {
 }
 
 func TestResolveRepo_FromMap(t *testing.T) {
+	t.Parallel()
 	c := &Collector{workloadRepos: map[string]string{"svc": "svc-repo"}}
 
 	target := contracts.TargetRef{Kind: "service", Name: "svc"}
@@ -345,6 +358,7 @@ func TestResolveRepo_FromMap(t *testing.T) {
 }
 
 func TestResolveRepo_NotFound(t *testing.T) {
+	t.Parallel()
 	c := &Collector{workloadRepos: map[string]string{}}
 
 	target := contracts.TargetRef{Kind: "service", Name: "unknown"}
@@ -354,6 +368,7 @@ func TestResolveRepo_NotFound(t *testing.T) {
 }
 
 func TestShortSHA(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  string
@@ -372,6 +387,7 @@ func TestShortSHA(t *testing.T) {
 }
 
 func TestFirstLine(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input string
 		want  string

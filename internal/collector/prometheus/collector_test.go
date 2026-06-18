@@ -108,6 +108,7 @@ func newTestCollector(api promv1.API) *Collector {
 }
 
 func TestCollector_Name(t *testing.T) {
+	t.Parallel()
 	c := newTestCollector(&mockPromAPI{})
 	if got := c.Name(); got != "prometheus" {
 		t.Fatalf("Name() = %q, want %q", got, "prometheus")
@@ -115,6 +116,7 @@ func TestCollector_Name(t *testing.T) {
 }
 
 func TestBuildQueries_WithService(t *testing.T) {
+	t.Parallel()
 	target := contracts.TargetRef{Namespace: "prod", Name: "web"}
 	labels := map[string]string{"service": "foo"}
 
@@ -138,6 +140,7 @@ func TestBuildQueries_WithService(t *testing.T) {
 }
 
 func TestBuildQueries_WithJob(t *testing.T) {
+	t.Parallel()
 	target := contracts.TargetRef{Namespace: "prod", Name: "web"}
 	labels := map[string]string{"job": "bar"}
 
@@ -161,6 +164,7 @@ func TestBuildQueries_WithJob(t *testing.T) {
 }
 
 func TestBuildQueries_NoService(t *testing.T) {
+	t.Parallel()
 	target := contracts.TargetRef{Namespace: "prod", Name: "web"}
 	labels := map[string]string{}
 
@@ -177,6 +181,7 @@ func TestBuildQueries_NoService(t *testing.T) {
 }
 
 func TestFirstLabel_Found(t *testing.T) {
+	t.Parallel()
 	labels := map[string]string{"service": "foo", "job": "bar"}
 	got := firstLabel(labels, "service", "job")
 	if got != "foo" {
@@ -185,6 +190,7 @@ func TestFirstLabel_Found(t *testing.T) {
 }
 
 func TestFirstLabel_NotFound(t *testing.T) {
+	t.Parallel()
 	labels := map[string]string{"region": "us-east-1"}
 	got := firstLabel(labels, "service", "job")
 	if got != "" {
@@ -210,6 +216,7 @@ func makeMatrix(values ...float64) model.Matrix {
 }
 
 func TestAnalyzeMatrix_Anomaly(t *testing.T) {
+	t.Parallel()
 	matrix := makeMatrix(0.1, 0.1, 0.1, 0.1, 0.5)
 	summary, score := analyzeMatrix("cpu_usage", matrix)
 	if score != scoreAnomaly {
@@ -221,6 +228,7 @@ func TestAnalyzeMatrix_Anomaly(t *testing.T) {
 }
 
 func TestAnalyzeMatrix_Elevated(t *testing.T) {
+	t.Parallel()
 	matrix := makeMatrix(0.10, 0.10, 0.10, 0.10, 0.19)
 	summary, score := analyzeMatrix("cpu_usage", matrix)
 	if score != scoreElevated {
@@ -232,6 +240,7 @@ func TestAnalyzeMatrix_Elevated(t *testing.T) {
 }
 
 func TestAnalyzeMatrix_Normal(t *testing.T) {
+	t.Parallel()
 	matrix := makeMatrix(0.1, 0.1, 0.1, 0.1, 0.1)
 	summary, score := analyzeMatrix("cpu_usage", matrix)
 	if score != scoreNormal {
@@ -243,6 +252,7 @@ func TestAnalyzeMatrix_Normal(t *testing.T) {
 }
 
 func TestAnalyzeMatrix_ZeroAvg_WithSpike(t *testing.T) {
+	t.Parallel()
 	// avg == 0 with last > 0 is unreachable since avg includes last.
 	// Verify that a spike from near-zero is detected as an anomaly.
 	matrix := makeMatrix(0, 0, 0, 0, 0.5)
@@ -256,6 +266,7 @@ func TestAnalyzeMatrix_ZeroAvg_WithSpike(t *testing.T) {
 }
 
 func TestAnalyzeMatrix_ZeroAvg_NoSpike(t *testing.T) {
+	t.Parallel()
 	matrix := makeMatrix(0, 0, 0, 0, 0)
 	_, score := analyzeMatrix("cpu_usage", matrix)
 	if score != scoreNormal {
@@ -264,6 +275,7 @@ func TestAnalyzeMatrix_ZeroAvg_NoSpike(t *testing.T) {
 }
 
 func TestAnalyzeMatrix_TooFewValues(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	matrix := model.Matrix{
 		&model.SampleStream{
@@ -294,6 +306,7 @@ func baseRequest() contracts.CollectRequest {
 }
 
 func TestCollect_WithResults(t *testing.T) {
+	t.Parallel()
 	matrix := makeMatrix(0.1, 0.1, 0.1, 0.1, 0.5)
 	api := &mockPromAPI{result: matrix}
 	c := newTestCollector(api)
@@ -317,6 +330,7 @@ func TestCollect_WithResults(t *testing.T) {
 }
 
 func TestCollect_QueryError(t *testing.T) {
+	t.Parallel()
 	api := &mockPromAPI{err: fmt.Errorf("connection refused")}
 	c := newTestCollector(api)
 	req := baseRequest()
@@ -331,6 +345,7 @@ func TestCollect_QueryError(t *testing.T) {
 }
 
 func TestCollect_LowScore(t *testing.T) {
+	t.Parallel()
 	matrix := makeMatrix(0.1, 0.1, 0.1, 0.1, 0.1)
 	api := &mockPromAPI{result: matrix}
 	c := newTestCollector(api)

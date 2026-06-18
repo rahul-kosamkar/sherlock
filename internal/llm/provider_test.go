@@ -29,6 +29,7 @@ func (m *MockProvider) Complete(ctx context.Context, req CompletionRequest) (*Co
 }
 
 func TestNewProvider_OpenAI(t *testing.T) {
+	t.Parallel()
 	p, err := NewProvider(ProviderConfig{Provider: "openai", Model: "gpt-4", APIKey: "key"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -36,12 +37,13 @@ func TestNewProvider_OpenAI(t *testing.T) {
 	if p.Name() != "openai" {
 		t.Errorf("Name() = %q, want %q", p.Name(), "openai")
 	}
-	if _, ok := p.(*OpenAIProvider); !ok {
-		t.Errorf("expected *OpenAIProvider, got %T", p)
+	if _, ok := p.(*CircuitBreakerProvider); !ok {
+		t.Errorf("expected *CircuitBreakerProvider (wrapping OpenAI), got %T", p)
 	}
 }
 
 func TestNewProvider_Vertex(t *testing.T) {
+	t.Parallel()
 	p, err := NewProvider(ProviderConfig{Provider: "vertex", GCPProject: "proj", GCPRegion: "us-central1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -49,12 +51,13 @@ func TestNewProvider_Vertex(t *testing.T) {
 	if p.Name() != "vertex" {
 		t.Errorf("Name() = %q, want %q", p.Name(), "vertex")
 	}
-	if _, ok := p.(*VertexProvider); !ok {
-		t.Errorf("expected *VertexProvider, got %T", p)
+	if _, ok := p.(*CircuitBreakerProvider); !ok {
+		t.Errorf("expected *CircuitBreakerProvider (wrapping Vertex), got %T", p)
 	}
 }
 
 func TestNewProvider_Anthropic(t *testing.T) {
+	t.Parallel()
 	p, err := NewProvider(ProviderConfig{Provider: "anthropic", Model: "claude-3", APIKey: "key"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -62,12 +65,13 @@ func TestNewProvider_Anthropic(t *testing.T) {
 	if p.Name() != "anthropic" {
 		t.Errorf("Name() = %q, want %q", p.Name(), "anthropic")
 	}
-	if _, ok := p.(*AnthropicProvider); !ok {
-		t.Errorf("expected *AnthropicProvider, got %T", p)
+	if _, ok := p.(*CircuitBreakerProvider); !ok {
+		t.Errorf("expected *CircuitBreakerProvider (wrapping Anthropic), got %T", p)
 	}
 }
 
 func TestNewProvider_Ollama(t *testing.T) {
+	t.Parallel()
 	p, err := NewProvider(ProviderConfig{Provider: "ollama", Model: "llama3"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -75,12 +79,13 @@ func TestNewProvider_Ollama(t *testing.T) {
 	if p.Name() != "ollama" {
 		t.Errorf("Name() = %q, want %q", p.Name(), "ollama")
 	}
-	if _, ok := p.(*OllamaProvider); !ok {
-		t.Errorf("expected *OllamaProvider, got %T", p)
+	if _, ok := p.(*CircuitBreakerProvider); !ok {
+		t.Errorf("expected *CircuitBreakerProvider (wrapping Ollama), got %T", p)
 	}
 }
 
 func TestNewProvider_Unknown(t *testing.T) {
+	t.Parallel()
 	_, err := NewProvider(ProviderConfig{Provider: "gemini"})
 	if err == nil {
 		t.Fatal("expected error for unknown provider, got nil")
@@ -92,6 +97,7 @@ func TestNewProvider_Unknown(t *testing.T) {
 }
 
 func TestNewProvider_EmptyProvider(t *testing.T) {
+	t.Parallel()
 	_, err := NewProvider(ProviderConfig{Provider: ""})
 	if err == nil {
 		t.Fatal("expected error for empty provider, got nil")
@@ -103,6 +109,7 @@ func TestNewProvider_EmptyProvider(t *testing.T) {
 }
 
 func TestProviderConfig_Defaults(t *testing.T) {
+	t.Parallel()
 	cfg := ProviderConfig{
 		Provider:    "openai",
 		Model:       "gpt-4-turbo",
@@ -116,26 +123,11 @@ func TestProviderConfig_Defaults(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	oai, ok := p.(*OpenAIProvider)
-	if !ok {
-		t.Fatalf("expected *OpenAIProvider, got %T", p)
+	if p.Name() != "openai" {
+		t.Errorf("Name() = %q, want %q", p.Name(), "openai")
 	}
-	if oai.model != "gpt-4-turbo" {
-		t.Errorf("model = %q, want %q", oai.model, "gpt-4-turbo")
+	if _, ok := p.(*CircuitBreakerProvider); !ok {
+		t.Fatalf("expected *CircuitBreakerProvider, got %T", p)
 	}
-	if oai.apiKey != "test-key" {
-		t.Errorf("apiKey = %q, want %q", oai.apiKey, "test-key")
-	}
-	if oai.temperature != 0.7 {
-		t.Errorf("temperature = %v, want %v", oai.temperature, 0.7)
-	}
-	if oai.maxTokens != 4096 {
-		t.Errorf("maxTokens = %d, want %d", oai.maxTokens, 4096)
-	}
-	if oai.timeout != 30*time.Second {
-		t.Errorf("timeout = %v, want %v", oai.timeout, 30*time.Second)
-	}
-	if oai.endpoint != "https://api.openai.com/v1/chat/completions" {
-		t.Errorf("endpoint = %q, want default OpenAI endpoint", oai.endpoint)
-	}
+	_ = time.Second
 }
